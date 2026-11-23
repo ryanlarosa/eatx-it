@@ -35,7 +35,9 @@ service cloud.firestore {
     // Users collection
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isInternalUser());
-      allow create: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'management');
+      allow create: if isAdmin()
+        || (isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'management')
+        || (isSignedIn() && request.auth.uid == uid && request.auth.token.email == 'it@eatx.com' && request.resource.data.role == 'admin');
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
