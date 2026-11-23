@@ -3,30 +3,52 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 
-/* Custom Scrollbar */
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ops-surface {
+    @apply bg-white dark:bg-[#12151C] border border-[#E4E6EB] dark:border-[#222733] rounded-lg;
+  }
+
+  .ops-surface-interactive {
+    @apply bg-white dark:bg-[#12151C] border border-[#E4E6EB] dark:border-[#222733] rounded-lg hover:border-[#C7CCD6] dark:hover:border-[#343C4F] transition-colors;
+  }
+
+  .ops-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-[#5A6270] dark:text-[#8B94A5];
+  }
+}
+
+/* Subtle Obsidian/Enterprise Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #d1d5db;
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #9ca3af;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #282e3d;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #3b4459;
 }

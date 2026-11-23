@@ -376,10 +376,10 @@ const Tasks: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <ClipboardList size={24} className="text-blue-600" /> IT Operations & Tasks
+          <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">
+            IT Operations & Tasks
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
             Track daily IT operations, venue issues, vendor work, and ticket resolutions.
           </p>
         </div>

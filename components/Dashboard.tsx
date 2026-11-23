@@ -1,9 +1,32 @@
-
-import React, { useEffect, useState } from 'react';
-import { Asset, AssetStats, IncidentReport, AssetRequest, Task } from '../types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { DollarSign, Box, Activity, Wrench, LifeBuoy, FileInput, CheckSquare, Users } from 'lucide-react';
-import { listenToIncidents, listenToRequests, listenToTasks, getAllUsers } from '../services/storageService';
+import React, { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import {
+  Asset,
+  AssetStats,
+  IncidentReport,
+  AssetRequest,
+  Task,
+} from "../types";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
+import { ArrowUpRight } from "lucide-react";
+import {
+  listenToIncidents,
+  listenToRequests,
+  listenToTasks,
+  getAllUsers,
+} from "../services/storageService";
+import { MetricTile, OpsPanel, StatusPill } from "./ui/OpsPrimitives";
 
 interface DashboardProps {
   stats: AssetStats;
@@ -20,209 +43,301 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
     const unsub1 = listenToIncidents(setTickets);
     const unsub2 = listenToRequests(setRequests);
     const unsub3 = listenToTasks(setTasks);
-    getAllUsers().then(u => setUserCount(u.length));
-    return () => { unsub1(); unsub2(); unsub3(); };
+    getAllUsers()
+      .then((u) => setUserCount(u.length))
+      .catch(() => {});
+    return () => {
+      unsub1();
+      unsub2();
+      unsub3();
+    };
   }, []);
 
-  const openTickets = tickets.filter(t => t.status !== 'Resolved' && t.status !== 'Rejected').length;
-  const criticalTickets = tickets.filter(t => (t.status !== 'Resolved' && t.status !== 'Rejected') && t.priority === 'Critical').length;
-  const pendingRequests = requests.filter(r => ['New', 'Acknowledged', 'Pending Finance', 'Approved'].includes(r.status)).length;
-  const pendingTasks = tasks.filter(t => t.status !== 'Completed').length;
+  const openTickets = tickets.filter(
+    (t) => t.status !== "Resolved" && t.status !== "Rejected"
+  ).length;
+  const criticalTickets = tickets.filter(
+    (t) =>
+      t.status !== "Resolved" &&
+      t.status !== "Rejected" &&
+      t.priority === "Critical"
+  ).length;
+  const pendingRequests = requests.filter((r) =>
+    ["New", "Acknowledged", "Pending Finance", "Approved"].includes(r.status)
+  ).length;
+  const pendingTasks = tasks.filter((t) => t.status !== "Completed").length;
+  const overdueTasks = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tasks.filter((t) => {
+      if (t.status === "Completed" || !t.dueDate) return false;
+      const d = new Date(t.dueDate);
+      d.setHours(0, 0, 0, 0);
+      return d < today;
+    }).length;
+  }, [tasks]);
 
-  // Data prep for charts
-  const statusData = [
-    { name: 'Active', value: stats.activeAssets, color: '#10b981' }, // emerald-500
-    { name: 'In Storage', value: stats.totalAssets - stats.activeAssets - stats.repairAssets, color: '#64748b' }, // slate-500
-    { name: 'Repair', value: stats.repairAssets, color: '#f59e0b' }, // amber-500
-  ].filter(d => d.value > 0);
-
-  // Group by location for value chart
-  const locationMap = new Map<string, number>();
-  allAssets.forEach(a => {
-      const val = a.purchaseCost || 0;
-      locationMap.set(a.location, (locationMap.get(a.location) || 0) + val);
-  });
-  const valueByLocation = Array.from(locationMap.entries())
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
-
-  // Safe check for category data
-  const categoryData = stats.byCategory && stats.byCategory.length > 0 ? stats.byCategory : [{ name: 'No Data', value: 1 }];
-  
-  const chartColors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4'];
-
-  // Helper component for Stat Cards
-  const StatCard = ({ title, value, icon: Icon, colorClass, subtext, alert }: any) => (
-    <div className={`bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border ${alert ? 'border-red-500 dark:border-red-500 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-800'} flex items-start justify-between relative overflow-hidden`}>
-      {alert && <div className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-bl-lg"></div>}
-      <div>
-        <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
-        <h3 className="text-2xl font-bold text-slate-800 dark:text-white">{value}</h3>
-        {subtext && <p className="text-xs text-slate-400 mt-1">{subtext}</p>}
-      </div>
-      <div className={`p-3 rounded-lg ${colorClass}`}>
-        <Icon size={24} />
-      </div>
-    </div>
+  const storageAssets = Math.max(
+    0,
+    stats.totalAssets - stats.activeAssets - stats.repairAssets
+  );
+  const utilizationPct = Math.round(
+    (stats.activeAssets / (stats.totalAssets || 1)) * 100
   );
 
+  const statusData = [
+    { name: "Active", value: stats.activeAssets, color: "#10b981" },
+    { name: "In Storage", value: storageAssets, color: "#64748b" },
+    { name: "Under Repair", value: stats.repairAssets, color: "#f59e0b" },
+  ].filter((d) => d.value > 0);
+
+  const valueByLocation = useMemo(() => {
+    const map = new Map<string, number>();
+    allAssets.forEach((a) => {
+      const loc = a.location || "Unassigned";
+      map.set(loc, (map.get(loc) || 0) + (a.purchaseCost || 0));
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [allAssets]);
+
+  const categoryData = useMemo(() => {
+    return (stats.byCategory || [])
+      .slice()
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+  }, [stats.byCategory]);
+
+  const tooltipStyle = {
+    backgroundColor: "#12151C",
+    borderRadius: "6px",
+    border: "1px solid #222733",
+    color: "#F1F3F7",
+    fontSize: "12px",
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">IT Hub Overview</h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">System status and operational metrics.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">
+            IT Operations Console
+          </h1>
+          <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
+            Live infrastructure telemetry, help desk queues, tasks, and fleet capital.
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-sm bg-white dark:bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm text-slate-600 dark:text-slate-300">
-            <Users size={16} className="text-blue-500"/>
-            <span className="font-bold">{userCount}</span> Users
+        <div className="flex items-center gap-2">
+          <StatusPill
+            label={`${userCount} Active Users`}
+            tone="emerald"
+          />
+          <Link
+            to="/executive"
+            className="h-7 px-2.5 rounded-md border border-[#E4E6EB] dark:border-[#222733] bg-white dark:bg-[#12151C] text-xs font-medium text-[#111318] dark:text-[#F1F3F7] hover:border-[#C7CCD6] dark:hover:border-[#343C4F] inline-flex items-center gap-1 transition-colors"
+          >
+            Executive View <ArrowUpRight size={13} />
+          </Link>
         </div>
       </div>
-      
-      {/* Operational Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-            title="Help Desk Tickets" 
-            value={openTickets} 
-            icon={LifeBuoy} 
-            colorClass="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
-            subtext={criticalTickets > 0 ? `${criticalTickets} Critical` : "Open Issues"}
-            alert={criticalTickets > 0}
+
+      {/* Primary KPI Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricTile
+          label="Open Tickets"
+          value={openTickets}
+          subtext={
+            criticalTickets > 0
+              ? `${criticalTickets} critical priority`
+              : "No critical alerts"
+          }
+          tone={criticalTickets > 0 ? "red" : openTickets > 0 ? "amber" : "emerald"}
+          alert={criticalTickets > 0}
+          to="/repairs"
         />
-        <StatCard 
-            title="Pending Requests" 
-            value={pendingRequests} 
-            icon={FileInput} 
-            colorClass="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
-            subtext="Procurement & Deploy"
+        <MetricTile
+          label="Operational Tasks"
+          value={pendingTasks}
+          subtext={
+            overdueTasks > 0 ? `${overdueTasks} overdue` : "All on schedule"
+          }
+          tone={overdueTasks > 0 ? "red" : "blue"}
+          alert={overdueTasks > 0}
+          to="/tasks"
         />
-        <StatCard 
-            title="Active Tasks" 
-            value={pendingTasks} 
-            icon={CheckSquare} 
-            colorClass="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-            subtext="To Do & In Progress"
+        <MetricTile
+          label="Procurement Queue"
+          value={pendingRequests}
+          subtext="Pending approval / deploy"
+          tone={pendingRequests > 0 ? "purple" : "slate"}
+          to="/requests"
         />
-        <StatCard 
-            title="Total Assets" 
-            value={stats.totalAssets} 
-            icon={Box} 
-            colorClass="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
-            subtext={`AED ${stats.totalValue.toLocaleString()}`}
+        <MetricTile
+          label="Managed Fleet"
+          value={stats.totalAssets}
+          subtext={`AED ${stats.totalValue.toLocaleString()}`}
+          tone="emerald"
+          to="/assets"
         />
       </div>
 
-      {/* Asset Health Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 p-5 rounded-xl flex items-center gap-4">
-             <div className="bg-white dark:bg-emerald-900/30 p-3 rounded-full text-emerald-600 dark:text-emerald-400 shadow-sm"><Activity size={24}/></div>
-             <div>
-                 <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-300">{stats.activeAssets}</div>
-                 <div className="text-xs font-bold uppercase text-emerald-700 dark:text-emerald-500">Active Fleet</div>
-             </div>
-         </div>
-         <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 p-5 rounded-xl flex items-center gap-4">
-             <div className="bg-white dark:bg-amber-900/30 p-3 rounded-full text-amber-600 dark:text-amber-400 shadow-sm"><Wrench size={24}/></div>
-             <div>
-                 <div className="text-2xl font-bold text-amber-900 dark:text-amber-300">{stats.repairAssets}</div>
-                 <div className="text-xs font-bold uppercase text-amber-700 dark:text-amber-500">In Repair</div>
-             </div>
-         </div>
-         <div className="bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/30 p-5 rounded-xl flex items-center gap-4">
-             <div className="bg-white dark:bg-indigo-900/30 p-3 rounded-full text-indigo-600 dark:text-indigo-400 shadow-sm"><DollarSign size={24}/></div>
-             <div>
-                 <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-300">{(stats.activeAssets / (stats.totalAssets || 1) * 100).toFixed(0)}%</div>
-                 <div className="text-xs font-bold uppercase text-indigo-700 dark:text-indigo-500">Utilization Rate</div>
-             </div>
-         </div>
+      {/* Secondary Fleet Telemetry Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <MetricTile
+          label="Active Deployed"
+          value={stats.activeAssets}
+          subtext={`${utilizationPct}% fleet utilization`}
+          tone="emerald"
+        />
+        <MetricTile
+          label="In Storage"
+          value={storageAssets}
+          subtext="Available spares"
+          tone="slate"
+        />
+        <MetricTile
+          label="Under Repair"
+          value={stats.repairAssets}
+          subtext="Vendor / bench queue"
+          tone={stats.repairAssets > 0 ? "amber" : "slate"}
+        />
+        <MetricTile
+          label="Warranty Alerts"
+          value={(stats.expiringWarranties || 0) + (stats.expiredWarranties || 0)}
+          subtext={`${stats.expiringWarranties || 0} expiring • ${
+            stats.expiredWarranties || 0
+          } expired`}
+          tone={
+            (stats.expiredWarranties || 0) > 0
+              ? "red"
+              : (stats.expiringWarranties || 0) > 0
+              ? "amber"
+              : "emerald"
+          }
+          to="/reports"
+        />
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Asset Status Doughnut */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Fleet Status</h3>
-            <div className="h-64 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={statusData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
-                            dataKey="value"
-                        >
-                            {statusData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                            ))}
-                        </Pie>
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#f8fafc', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                            itemStyle={{ color: '#f8fafc' }}
-                        />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle"/>
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <OpsPanel title="Fleet Status" subtitle="Distribution by lifecycle state">
+          <div className="h-56 w-full">
+            {statusData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-[#8C95A6]">
+                No assets registered yet
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={52}
+                    outerRadius={74}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.color} strokeWidth={0} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: "#F1F3F7" }} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 pt-2 border-t border-[#E4E6EB] dark:border-[#222733] text-xs">
+            {statusData.map((s) => (
+              <div key={s.name} className="flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <span className="text-[#5A6270] dark:text-[#8B94A5]">{s.name}</span>
+                <span className="font-mono font-semibold tabular-nums text-[#111318] dark:text-[#F1F3F7]">
+                  {s.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </OpsPanel>
 
-        {/* Cost by Category Pie */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Cost Distribution</h3>
-            <div className="h-64 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={categoryData}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            dataKey="value"
-                        >
-                            {categoryData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} strokeWidth={0} />
-                            ))}
-                        </Pie>
-                        <Tooltip 
-                            contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#f8fafc', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                            itemStyle={{ color: '#f8fafc' }}
-                        />
-                    </PieChart>
-                </ResponsiveContainer>
-            </div>
-            <div className="text-xs text-center text-slate-400 dark:text-slate-500 mt-2">Breakdown by Category</div>
-        </div>
+        <OpsPanel title="Capital by Venue" subtitle="Top locations (AED)">
+          <div className="h-64 w-full">
+            {valueByLocation.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-xs text-[#8C95A6]">
+                No location valuation data
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={valueByLocation}
+                  layout="vertical"
+                  margin={{ top: 4, right: 16, left: 10, bottom: 4 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="2 2"
+                    horizontal={false}
+                    stroke="#334155"
+                    opacity={0.15}
+                  />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={90}
+                    tick={{ fontSize: 11, fill: "#8B94A5" }}
+                    interval={0}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(59,130,246,0.06)" }}
+                    contentStyle={tooltipStyle}
+                    itemStyle={{ color: "#F1F3F7" }}
+                    formatter={(value: number) => `AED ${value.toLocaleString()}`}
+                  />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 3, 3, 0]} barSize={14} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </OpsPanel>
 
-        {/* Value by Location Bar */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-w-0">
-            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Capital by Location</h3>
-            <div className="h-64 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={valueByLocation} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#334155" opacity={0.2} />
-                        <XAxis type="number" hide />
-                        <YAxis 
-                            dataKey="name" 
-                            type="category" 
-                            width={80} 
-                            tick={{fontSize: 11, fill: '#94a3b8'}} 
-                            interval={0} 
-                        />
-                        <Tooltip 
-                            cursor={{fill: 'transparent'}}
-                            contentStyle={{ backgroundColor: '#1e293b', borderRadius: '8px', border: 'none', color: '#f8fafc', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-                            itemStyle={{ color: '#f8fafc' }}
-                            formatter={(value: number) => `AED ${value.toLocaleString()}`}
-                        />
-                        <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={20} />
-                    </BarChart>
-                </ResponsiveContainer>
-            </div>
-        </div>
+        <OpsPanel title="Spend by Category" subtitle="Top hardware groups (AED)">
+          <div className="space-y-2.5 pt-1">
+            {categoryData.length === 0 ? (
+              <div className="h-56 flex items-center justify-center text-xs text-[#8C95A6]">
+                No category data yet
+              </div>
+            ) : (
+              categoryData.map((c) => {
+                const maxVal = categoryData[0]?.value || 1;
+                const widthPct = Math.max(4, Math.round((c.value / maxVal) * 100));
+                return (
+                  <div key={c.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="text-[#111318] dark:text-[#F1F3F7] font-medium truncate">
+                        {c.name}
+                      </span>
+                      <span className="font-mono text-[11px] text-[#5A6270] dark:text-[#8B94A5] tabular-nums shrink-0">
+                        AED {c.value.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="w-full h-1.5 bg-[#F4F5F7] dark:bg-[#181C25] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[#111318] dark:bg-blue-500 rounded-full"
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </OpsPanel>
       </div>
     </div>
   );

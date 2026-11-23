@@ -1,98 +1,255 @@
-
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { MonitorSmartphone, Database, Shield, LayoutDashboard, List, ShoppingBag, Wrench, Receipt, CalendarCheck, Users, Settings as SettingsIcon, X, ClipboardList, LifeBuoy, Box, Building2, Presentation, BarChart3 } from 'lucide-react';
-import { getSandboxStatus, getCurrentUserProfile } from '../services/storageService';
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Presentation,
+  Box,
+  Building2,
+  Users,
+  ClipboardList,
+  LifeBuoy,
+  FolderKanban,
+  ShoppingBag,
+  Receipt,
+  BarChart3,
+  Settings as SettingsIcon,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  getSandboxStatus,
+  getCurrentUserProfile,
+  canManageOperations,
+} from "../services/storageService";
 
 interface SidebarProps {
   notificationCount: number;
   isOpen: boolean;
+  isCollapsed: boolean;
   onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ notificationCount, isOpen, onClose }) => {
+interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+  opsOnly?: boolean;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({
+  notificationCount,
+  isOpen,
+  isCollapsed,
+  onClose,
+}) => {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
   const user = getCurrentUserProfile();
-  const canEdit = user?.role === 'admin' || user?.role === 'technician';
+  const canEdit = canManageOperations(user);
   const isSandbox = getSandboxStatus();
-  
-  const linkClass = (path: string) => `flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all font-medium text-sm my-1 ${isActive(path) ? 'bg-slate-900 text-white shadow-md shadow-slate-900/20 dark:bg-blue-600 dark:text-white dark:shadow-blue-900/30' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'}`;
+
+  const groups: { title: string; items: NavItem[] }[] = [
+    {
+      title: "Overview",
+      items: [
+        { to: "/", label: "Operations", icon: LayoutDashboard },
+        { to: "/executive", label: "Executive View", icon: Presentation },
+      ],
+    },
+    {
+      title: "Infrastructure",
+      items: [
+        { to: "/assets", label: "Assets", icon: Box },
+        { to: "/venues", label: "Venues & Sites", icon: Building2 },
+        { to: "/staff", label: "Employees", icon: Users, opsOnly: true },
+      ],
+    },
+    {
+      title: "Workflows",
+      items: [
+        { to: "/tasks", label: "Tasks", icon: ClipboardList },
+        { to: "/repairs", label: "Help Desk", icon: LifeBuoy },
+        {
+          to: "/planner",
+          label: "Projects",
+          icon: FolderKanban,
+          badge: notificationCount,
+        },
+        { to: "/requests", label: "Procurement", icon: ShoppingBag },
+      ],
+    },
+    {
+      title: "Governance",
+      items: [
+        { to: "/invoices", label: "Invoices", icon: Receipt },
+        { to: "/reports", label: "Reports & Backup", icon: BarChart3 },
+        { to: "/settings", label: "Settings", icon: SettingsIcon, opsOnly: true },
+      ],
+    },
+  ];
+
+  const linkClass = (path: string) => {
+    const active = isActive(path);
+    return `group relative flex items-center ${
+      isCollapsed ? "md:justify-center md:px-0" : "px-2.5"
+    } gap-2.5 py-2 rounded-md text-[13px] font-medium transition-colors ${
+      active
+        ? "bg-[#111318] text-white dark:bg-[#1D2330] dark:text-[#F1F3F7]"
+        : "text-[#5A6270] hover:bg-[#EBEEF2] hover:text-[#111318] dark:text-[#8B94A5] dark:hover:bg-[#181C25] dark:hover:text-[#F1F3F7]"
+    }`;
+  };
 
   return (
     <>
       {isOpen && (
-        <div 
-            className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
-            onClick={onClose}
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-[2px]"
+          onClick={onClose}
         />
       )}
 
-      <div className={`
-        fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col z-50 
-        transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none md:translate-x-0
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-      `}>
-        <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-3 text-slate-900 dark:text-white font-bold text-xl tracking-tight">
-            <div className="bg-slate-900 dark:bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
-                <MonitorSmartphone size={20} />
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-[#0E1117] border-r border-[#E4E6EB] dark:border-[#222733] transition-all duration-200 ease-out
+          w-60 ${isCollapsed ? "md:w-[68px]" : "md:w-60"}
+          ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
+        {/* Brand Header */}
+        <div
+          className={`h-14 flex items-center border-b border-[#E4E6EB] dark:border-[#222733] shrink-0 ${
+            isCollapsed ? "px-4 md:justify-center md:px-0" : "px-4 justify-between"
+          }`}
+        >
+          <Link
+            to="/"
+            onClick={onClose}
+            className="flex items-center gap-2.5 min-w-0"
+          >
+            <div className="w-7 h-7 rounded-md bg-[#111318] dark:bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 tracking-tighter">
+              EX
             </div>
-            <span>IT Hub</span>
-          </div>
-          <button onClick={onClose} className="md:hidden ml-auto text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded-lg">
-            <X size={20} />
+            <div className={`${isCollapsed ? "md:hidden" : "block"} min-w-0`}>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-[15px] tracking-tight text-[#111318] dark:text-[#F1F3F7]">
+                  eatx.
+                </span>
+                <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#F4F5F7] dark:bg-[#181C25] text-[#5A6270] dark:text-[#8B94A5] border border-[#E4E6EB] dark:border-[#222733]">
+                  IT OPS
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          <button
+            onClick={onClose}
+            className="md:hidden p-1 text-[#5A6270] hover:text-[#111318] dark:text-[#8B94A5] dark:hover:text-white rounded-md"
+          >
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-4">
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-800">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Environment</p>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-                        {isSandbox ? <Database size={14} className="text-amber-500"/> : <Shield size={14} className="text-emerald-500"/>}
-                        {isSandbox ? 'Sandbox Mode' : 'Live System'}
-                    </div>
-                    {isSandbox && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>}
+        {/* Navigation Groups */}
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-5">
+          {groups.map((group) => {
+            const visibleItems = group.items.filter(
+              (item) => !item.opsOnly || canEdit
+            );
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={group.title}>
+                <div
+                  className={`px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8C95A6] dark:text-[#5C6475] ${
+                    isCollapsed ? "md:hidden" : "block"
+                  }`}
+                >
+                  {group.title}
                 </div>
-            </div>
-        </div>
-
-        <nav className="flex-1 px-4 overflow-y-auto custom-scrollbar">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-2">Core Modules</div>
-          
-          <Link to="/" className={linkClass('/')} onClick={onClose}><LayoutDashboard size={18} /> Dashboard</Link>
-          <Link to="/executive" className={linkClass('/executive')} onClick={onClose}><Presentation size={18} /> Executive View</Link>
-          <Link to="/repairs" className={linkClass('/repairs')} onClick={onClose}><LifeBuoy size={18} /> Help Desk</Link>
-          <Link to="/assets" className={linkClass('/assets')} onClick={onClose}><Box size={18} /> Inventory Registry</Link>
-          <Link to="/venues" className={linkClass('/venues')} onClick={onClose}><Building2 size={18} /> Venues & Infra</Link>
-          <Link to="/requests" className={linkClass('/requests')} onClick={onClose}><ShoppingBag size={18} /> Procurement</Link>
-          
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-6">Operations</div>
-          
-          <Link to="/tasks" className={linkClass('/tasks')} onClick={onClose}><ClipboardList size={18} /> Task Board</Link>
-          <Link to="/planner" className={linkClass('/planner')} onClick={onClose}>
-             <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3"><CalendarCheck size={18} /> Projects</div>
-              {notificationCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">{notificationCount}</span>}
-             </div>
-          </Link>
-          <Link to="/invoices" className={linkClass('/invoices')} onClick={onClose}><Receipt size={18} /> Invoices</Link>
-          <Link to="/reports" className={linkClass('/reports')} onClick={onClose}><BarChart3 size={18} /> Reports & Backup</Link>
-          
-          {canEdit && (
-            <>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-6">Admin</div>
-              <Link to="/staff" className={linkClass('/staff')} onClick={onClose}><Users size={18} /> Users & Handovers</Link>
-              <Link to="/settings" className={linkClass('/settings')} onClick={onClose}><SettingsIcon size={18} /> Configuration</Link>
-            </>
-          )}
+                {isCollapsed && (
+                  <div className="hidden md:block h-px bg-[#E4E6EB] dark:bg-[#222733] mx-2 mb-2" />
+                )}
+                <div className="space-y-0.5">
+                  {visibleItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = isActive(item.to);
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={onClose}
+                        title={isCollapsed ? item.label : undefined}
+                        className={linkClass(item.to)}
+                      >
+                        {active && (
+                          <span className="hidden md:block absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-r bg-blue-500" />
+                        )}
+                        <Icon
+                          size={16}
+                          className={`shrink-0 ${
+                            active
+                              ? "text-white dark:text-blue-400"
+                              : "text-[#6B7280] dark:text-[#7E8799] group-hover:text-[#111318] dark:group-hover:text-[#F1F3F7]"
+                          }`}
+                        />
+                        <span
+                          className={`truncate ${
+                            isCollapsed ? "md:hidden" : "flex-1"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                        {item.badge && item.badge > 0 ? (
+                          <span
+                            className={`font-mono text-[10px] font-semibold px-1.5 py-0.2 rounded bg-red-500 text-white ${
+                              isCollapsed
+                                ? "md:absolute md:top-1 md:right-1 md:w-2 md:h-2 md:p-0 md:rounded-full md:text-[0px]"
+                                : ""
+                            }`}
+                          >
+                            {item.badge}
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </nav>
-        
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 text-center">
-            <p className="text-[10px] text-slate-400">v1.6.0 • EatX IT Hub</p>
+
+        {/* Compact Status Footer */}
+        <div className="p-3 border-t border-[#E4E6EB] dark:border-[#222733] shrink-0">
+          <div
+            className={`flex items-center ${
+              isCollapsed ? "md:justify-center" : "justify-between"
+            } px-2 py-1.5 rounded-md bg-[#F8F9FB] dark:bg-[#141821] border border-[#E4E6EB] dark:border-[#222733]`}
+            title={isSandbox ? "Sandbox Environment" : "Production Environment"}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className={`w-2 h-2 rounded-full shrink-0 ${
+                  isSandbox ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                }`}
+              />
+              <span
+                className={`text-[11px] font-medium text-[#5A6270] dark:text-[#8B94A5] truncate ${
+                  isCollapsed ? "md:hidden" : "block"
+                }`}
+              >
+                {isSandbox ? "Sandbox" : "Production"}
+              </span>
+            </div>
+            <span
+              className={`font-mono text-[10px] text-[#8C95A6] dark:text-[#5C6475] ${
+                isCollapsed ? "md:hidden" : "block"
+              }`}
+            >
+              v2.0
+            </span>
+          </div>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

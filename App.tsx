@@ -38,25 +38,35 @@ const ProtectedRoute = ({ children, requiredRole }: { children?: React.ReactNode
 const AssetRegistryWrapper = ({ assets, view, setView, editingAsset, setEditingAsset, handleSaveAsset, handleDuplicate, handleDeleteAsset, loading, canEdit }: any) => {
     const [searchParams, setSearchParams] = useSearchParams();
     const deepLinkId = searchParams.get('id');
+    const isNewParam = searchParams.get('new');
 
     useEffect(() => {
+        if (isNewParam === '1' && canEdit) {
+            setEditingAsset(null);
+            setView('form');
+            setSearchParams({}, { replace: true });
+            return;
+        }
         if (deepLinkId && assets.length > 0 && !editingAsset) {
             const asset = assets.find((a: Asset) => a.id === deepLinkId);
             if (asset) { setEditingAsset(asset); setView('form'); }
         }
-    }, [deepLinkId, assets]);
+    }, [deepLinkId, isNewParam, assets]);
 
     return view === 'list' ? (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Asset Registry</h1>
+                <div>
+                  <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">Asset Registry</h1>
+                  <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">Centralized hardware inventory across EATX venues and offices.</p>
+                </div>
                 {canEdit && (
-                    <button onClick={() => { setEditingAsset(null); setView('form'); }} className="bg-slate-900 text-white dark:bg-blue-600 px-4 py-2 rounded-lg hover:bg-black dark:hover:bg-blue-700 flex items-center gap-2 font-medium shadow-sm transition-all text-sm md:text-base">
-                        <PlusCircle size={20} /> <span className="hidden sm:inline">Add Asset</span><span className="sm:hidden">Add</span>
+                    <button onClick={() => { setEditingAsset(null); setView('form'); }} className="bg-[#111318] text-white dark:bg-blue-600 px-3.5 py-2 rounded-md hover:bg-black dark:hover:bg-blue-500 flex items-center gap-2 font-medium transition-colors text-xs sm:text-sm">
+                        <PlusCircle size={16} /> <span className="hidden sm:inline">Add Asset</span><span className="sm:hidden">Add</span>
                     </button>
                 )}
             </div>
-            {loading ? <div className="flex justify-center p-12"><Loader2 className="animate-spin text-slate-400" size={32} /></div> : 
+            {loading ? <div className="flex justify-center p-12"><Loader2 className="animate-spin text-slate-400" size={28} /></div> : 
                 <AssetList assets={assets} onEdit={(a) => { setEditingAsset(a); setView('form'); }} onDuplicate={handleDuplicate} onDelete={handleDeleteAsset} />
             }
         </div>
@@ -71,11 +81,20 @@ const AppShell = () => {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('eatx_theme') === 'dark');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => localStorage.getItem('eatx_sidebar_collapsed') === 'true');
 
   useEffect(() => {
     if (isDarkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('eatx_theme', 'dark'); } 
     else { document.documentElement.classList.remove('dark'); localStorage.setItem('eatx_theme', 'light'); }
   }, [isDarkMode]);
+
+  const toggleSidebarCollapse = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('eatx_sidebar_collapsed', next ? 'true' : 'false');
+      return next;
+    });
+  };
 
   const handleSaveAsset = async (asset: Asset) => { await saveAsset(asset); setView('list'); setEditingAsset(null); };
   const handleDeleteAsset = async (id: string) => { try { await deleteAsset(id); } catch (e) { console.error(e); } };
@@ -89,7 +108,7 @@ const AppShell = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200 overflow-x-hidden">
+      <div className="min-h-screen bg-[#F4F5F7] dark:bg-[#0B0D11] text-[#111318] dark:text-[#F1F3F7] font-sans transition-colors duration-200 overflow-x-hidden">
         <Routes>
             {/* Public Routes are top-level and centered */}
             <Route path="/sign/:id" element={<SignHandover />} />
@@ -101,11 +120,25 @@ const AppShell = () => {
             <Route path="/*" element={
                 !user ? <LoginScreen /> : (
                 <div className="flex h-screen overflow-hidden">
-                    <Sidebar notificationCount={overdueCount} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-                    <div className="flex-1 flex flex-col min-w-0 md:ml-64 transition-all duration-300 ease-in-out h-full">
-                        <TopBar onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} user={user} notifications={notifications} onLogout={logoutUser} />
-                        <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar">
-                            <div className="max-w-7xl mx-auto pb-10">
+                    <Sidebar
+                      notificationCount={overdueCount}
+                      isOpen={isSidebarOpen}
+                      isCollapsed={isSidebarCollapsed}
+                      onClose={() => setIsSidebarOpen(false)}
+                    />
+                    <div className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ease-out h-full ${isSidebarCollapsed ? 'md:ml-[68px]' : 'md:ml-60'}`}>
+                        <TopBar
+                          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                          isSidebarCollapsed={isSidebarCollapsed}
+                          onToggleCollapse={toggleSidebarCollapse}
+                          isDarkMode={isDarkMode}
+                          toggleTheme={() => setIsDarkMode(!isDarkMode)}
+                          user={user}
+                          notifications={notifications}
+                          onLogout={logoutUser}
+                        />
+                        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+                            <div className="max-w-[1400px] mx-auto pb-10">
                                 <Routes>
                                     <Route path="/" element={isReadOnlyRole(user) ? <ExecutiveDashboard /> : <Dashboard stats={getStats(assets)} allAssets={assets} />} />
                                     <Route path="/executive" element={<ExecutiveDashboard />} />
