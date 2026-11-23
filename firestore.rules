@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(roles) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role in roles;
+    }
+
+    function isAdmin() {
+      return hasRole(['admin']);
+    }
+
+    function isITStaff() {
+      return hasRole(['admin', 'technician']);
+    }
+
+    function isInternalUser() {
+      return hasRole(['admin', 'technician', 'management', 'viewer']);
+    }
+
+    function isSandboxUser() {
+      return hasRole(['admin', 'sandbox_user']);
+    }
+
+    // Users collection
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isInternalUser());
+      allow create: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'management');
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Settings
+    match /settings/{docId} {
+      allow read: if isInternalUser() || docId == 'appConfig';
+      allow write: if isAdmin();
+    }
+
+    // Core IT Collections (Assets, Logs, Projects, Tasks, Invoices, Venues, Employees, Vendors, Notifications)
+    match /{col}/{docId} {
+      allow read: if col in [
+        'assets', 'logs', 'projects', 'tasks', 'invoices',
+        'venues', 'venueVisits', 'employees', 'vendors', 'notifications'
+      ] && isInternalUser();
+
+      allow create, update: if col in [
+        'assets', 'logs', 'projects', 'tasks', 'invoices',
+        'venues', 'venueVisits', 'employees', 'vendors', 'notifications'
+      ] && isITStaff();
+
+      allow delete: if col in [
+        'assets', 'logs', 'projects', 'tasks', 'invoices',
+        'venues', 'venueVisits', 'employees', 'vendors', 'notifications'
+      ] && isAdmin();
+    }
+
+    // Public-facing Help Desk Incidents & Asset Requests
+    match /incidents/{docId} {
+      allow read: if isInternalUser() || isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isITStaff();
+      allow delete: if isAdmin();
+    }
+
+    match /requests/{docId} {
+      allow read: if isInternalUser() || isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isITStaff();
+      allow delete: if isAdmin();
+    }
+
+    // Digital Handover Documents & Pending Signing Links
+    match /pendingHandovers/{docId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isITStaff();
+      allow update: if isITStaff() || (isSignedIn() && request.resource.data.status == 'Completed');
+    }
+
+    match /documents/{docId} {
+      allow read: if isInternalUser();
+      allow create: if isSignedIn();
+      allow update, delete: if isITStaff();
+    }
+
+    // Sandbox collections (isolated for testing)
+    match /{col}/{docId} {
+      allow read, write: if col.matches('sandbox_.*') && isSandboxUser();
+    }
+  }
+}
