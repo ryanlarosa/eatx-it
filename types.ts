@@ -198,12 +198,47 @@ export interface ProjectItem {
   dueDate: string;
 }
 
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  targetDate?: string;
+  owner?: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+}
+
+export interface ProjectBlocker {
+  id: string;
+  title: string;
+  severity: 'Low' | 'Medium' | 'High' | 'Critical';
+  resolved: boolean;
+  createdAt: string;
+}
+
+export interface ManagementDecision {
+  id: string;
+  title: string;
+  details?: string;
+  status: 'Pending' | 'Approved' | 'Deferred';
+  requestedAt: string;
+  decidedAt?: string;
+}
+
+export type ProjectStatus = 'Planning' | 'In Progress' | 'On Hold' | 'Completed';
+
 export interface Project {
   id: string;
   name: string;
   description: string;
   targetDate: string;
-  status: 'Planning' | 'In Progress' | 'Completed';
+  status: ProjectStatus;
+  owner?: string;
+  assignedPersonnel?: string[];
+  venue?: string;
+  progress?: number;
+  milestones?: ProjectMilestone[];
+  dependencies?: string[];
+  blockers?: ProjectBlocker[];
+  decisionsRequired?: ManagementDecision[];
   items: ProjectItem[];
 }
 

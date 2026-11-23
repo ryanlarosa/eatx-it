@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({ notificationCount, isOpen, onClose })
           <Link to="/tasks" className={linkClass('/tasks')} onClick={onClose}><ClipboardList size={18} /> Task Board</Link>
           <Link to="/planner" className={linkClass('/planner')} onClick={onClose}>
              <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-3"><CalendarCheck size={18} /> Planner</div>
+              <div className="flex items-center gap-3"><CalendarCheck size={18} /> Projects</div>
               {notificationCount > 0 && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">{notificationCount}</span>}
              </div>
           </Link>
