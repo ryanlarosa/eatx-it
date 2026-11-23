@@ -32,23 +32,34 @@ service cloud.firestore {
       return hasRole(['admin', 'sandbox_user']);
     }
 
+    // Verified official EATX / Bull&Roo Google Workspace email domains
+    function isCompanyEmail() {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@(bullandroo\\.com|byronbathers\\.com|commongroundsdubai\\.com|dmcclounge\\.com|eatx\\.com|encounter\\.ae|encountercoffee\\.ae|encountercoffeeroasters\\.com|frankyinflorence\\.com|frankyspizzeria\\.com|harvestandco\\.com|hawkerboi\\.com|onlyonsundaes\\.com|riseanddawnbakehouse\\.com|splendourfields\\.com|theguilddubai\\.com|thesumofusdubai\\.com|tomandserg\\.com)$');
+    }
+
+    function canUseStaffPortal() {
+      return isInternalUser() || hasRole(['requester']) || isCompanyEmail();
+    }
+
     // Users collection
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isInternalUser());
       allow create: if isAdmin()
-        || (isSignedIn() && request.auth.uid == uid && request.resource.data.role == 'management')
         || (isSignedIn() && request.auth.uid == uid && request.auth.token.email == 'it@eatx.com' && request.resource.data.role == 'admin');
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Settings
+    // Settings (appConfig readable by authenticated staff portal users for venue/category dropdowns)
     match /settings/{docId} {
-      allow read: if isInternalUser() || docId == 'appConfig';
+      allow read: if isInternalUser() || (docId == 'appConfig' && canUseStaffPortal());
       allow write: if isAdmin();
     }
 
-    // Core IT Collections (Assets, Logs, Projects, Tasks, Invoices, Venues, Employees, Vendors, Notifications)
+    // Core IT Collections (strictly internal IT & Management)
     match /{col}/{docId} {
       allow read: if col in [
         'assets', 'logs', 'projects', 'tasks', 'invoices',
@@ -66,17 +77,17 @@ service cloud.firestore {
       ] && isAdmin();
     }
 
-    // Public-facing Help Desk Incidents & Asset Requests
+    // Authenticated Staff Portal: Help Desk Incidents & Asset Requests (NO anonymous/public access)
     match /incidents/{docId} {
-      allow read: if isInternalUser() || isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if canUseStaffPortal();
+      allow create: if canUseStaffPortal();
       allow update: if isITStaff();
       allow delete: if isAdmin();
     }
 
     match /requests/{docId} {
-      allow read: if isInternalUser() || isSignedIn();
-      allow create: if isSignedIn();
+      allow read: if canUseStaffPortal();
+      allow create: if canUseStaffPortal();
       allow update: if isITStaff();
       allow delete: if isAdmin();
     }

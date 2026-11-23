@@ -23,7 +23,7 @@ import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import LoginScreen from './components/LoginScreen';
 import { Asset, UserRole } from './types';
-import { saveAsset, deleteAsset, getStats, logoutUser, getCurrentUserProfile, canManageOperations, isReadOnlyRole } from './services/storageService';
+import { saveAsset, deleteAsset, getStats, logoutUser, getCurrentUserProfile, canManageOperations, isReadOnlyRole, hasInternalConsoleAccess } from './services/storageService';
 import { AppDataProvider, useAppData } from './context/AppDataContext';
 
 const ProtectedRoute = ({ children, requiredRole }: { children?: React.ReactNode, requiredRole?: UserRole }) => {
@@ -118,7 +118,7 @@ const AppShell = () => {
             
             {/* Shell Routes */}
             <Route path="/*" element={
-                !user ? <LoginScreen /> : (
+                !user ? <LoginScreen /> : !hasInternalConsoleAccess(user) ? <Navigate to="/report-issue" replace /> : (
                 <div className="flex h-screen overflow-hidden">
                     <Sidebar
                       notificationCount={overdueCount}

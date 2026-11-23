@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { getPublicItemStatus, PublicStatusResult, getSandboxStatus } from '../services/storageService';
 import { Search, Loader2, Clock, CheckCircle, AlertCircle, Calendar, MessageSquare, Database, Activity } from 'lucide-react';
+import StaffPortalGate from './StaffPortalGate';
 
-const PublicStatusTracker: React.FC = () => {
+const StatusTrackerContent: React.FC = () => {
     const [refId, setRefId] = useState('');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<PublicStatusResult | null>(null);
@@ -174,5 +175,14 @@ const PublicStatusTracker: React.FC = () => {
         </div>
     );
 };
+
+const PublicStatusTracker: React.FC = () => (
+    <StaffPortalGate
+        title="Track IT Ticket or Request"
+        subtitle="Check live progress on your submitted IT ticket or equipment request."
+    >
+        {() => <StatusTrackerContent />}
+    </StaffPortalGate>
+);
 
 export default PublicStatusTracker;

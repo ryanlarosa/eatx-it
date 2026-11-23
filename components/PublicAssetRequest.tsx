@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
+import { UserProfile } from '../types';
 import { getAppConfig, createAssetRequest, getSandboxStatus } from '../services/storageService';
 import { ShoppingBag, Send, Loader2, CheckCircle, Plus, Trash2, User, Users, Database, Mail, Building2, ChevronRight, Info } from 'lucide-react';
+import StaffPortalGate from './StaffPortalGate';
 
-const PublicAssetRequest: React.FC = () => {
+const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
     const [departments, setDepartments] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitted, setSubmitted] = useState(false);
@@ -12,8 +14,8 @@ const PublicAssetRequest: React.FC = () => {
 
     // Form
     const [requestType, setRequestType] = useState<'individual' | 'department'>('individual');
-    const [submitterName, setSubmitterName] = useState('');
-    const [submitterEmail, setSubmitterEmail] = useState('');
+    const [submitterName, setSubmitterName] = useState(user.displayName || user.email.split('@')[0] || '');
+    const [submitterEmail, setSubmitterEmail] = useState(user.email || '');
     const [employeeName, setEmployeeName] = useState('');
     const [department, setDepartment] = useState('');
     
@@ -266,5 +268,14 @@ const PublicAssetRequest: React.FC = () => {
         </div>
     );
 };
+
+const PublicAssetRequest: React.FC = () => (
+    <StaffPortalGate
+        title="Request IT Equipment"
+        subtitle="Submit hardware or peripheral procurement requests to EATX IT."
+    >
+        {(user) => <AssetRequestContent user={user} />}
+    </StaffPortalGate>
+);
 
 export default PublicAssetRequest;

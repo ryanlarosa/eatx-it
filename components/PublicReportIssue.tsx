@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { Asset } from '../types';
-import { getAppConfig, getAssets, createIncidentReport, getSandboxStatus } from '../services/storageService';
+import { Asset, UserProfile } from '../types';
+import { getAppConfig, getAssets, createIncidentReport, getSandboxStatus, hasInternalConsoleAccess } from '../services/storageService';
 import { AlertTriangle, Send, Loader2, CheckCircle, MonitorSmartphone, MapPin, Search, Camera, Image as ImageIcon, X, Database, Mail } from 'lucide-react';
+import StaffPortalGate from './StaffPortalGate';
 
-const PublicReportIssue: React.FC = () => {
+const ReportIssueContent: React.FC<{ user: UserProfile }> = ({ user }) => {
     const [locations, setLocations] = useState<string[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [assets, setAssets] = useState<Asset[]>([]);
@@ -20,22 +21,33 @@ const PublicReportIssue: React.FC = () => {
     const [reportedSerial, setReportedSerial] = useState('');
     const [imageBase64, setImageBase64] = useState('');
     const [description, setDescription] = useState('');
-    const [reportedBy, setReportedBy] = useState('');
-    const [reporterEmail, setReporterEmail] = useState('');
+    const [reportedBy, setReportedBy] = useState(user.displayName || user.email.split('@')[0] || '');
+    const [reporterEmail, setReporterEmail] = useState(user.email || '');
     const [priority, setPriority] = useState('Medium');
 
     const isSandbox = getSandboxStatus();
 
     useEffect(() => {
         const init = async () => {
-            const [c, a] = await Promise.all([getAppConfig(), getAssets()]);
-            setLocations(c.locations);
-            setCategories(c.categories);
-            setAssets(a);
+            try {
+                const c = await getAppConfig();
+                setLocations(c.locations || []);
+                setCategories(c.categories || []);
+            } catch (e) {
+                console.warn('Could not load config:', e);
+            }
+            if (hasInternalConsoleAccess(user)) {
+                try {
+                    const a = await getAssets();
+                    setAssets(a);
+                } catch (e) {
+                    setAssets([]);
+                }
+            }
             setLoading(false);
         };
         init();
-    }, []);
+    }, [user]);
 
     const filteredAssets = location ? assets.filter(a => a.location === location) : [];
 
@@ -248,5 +260,14 @@ const PublicReportIssue: React.FC = () => {
         </div>
     );
 };
+
+const PublicReportIssue: React.FC = () => (
+    <StaffPortalGate
+        title="Report an IT Issue"
+        subtitle="Submit a repair or support ticket directly to the EATX IT team."
+    >
+        {(user) => <ReportIssueContent user={user} />}
+    </StaffPortalGate>
+);
 
 export default PublicReportIssue;

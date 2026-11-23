@@ -2,7 +2,7 @@
 export type AssetStatus = 'Active' | 'In Storage' | 'Under Repair' | 'Retired' | 'Lost/Stolen';
 export const ASSET_STATUSES: AssetStatus[] = ['Active', 'In Storage', 'Under Repair', 'Retired', 'Lost/Stolen'];
 
-export type UserRole = 'admin' | 'technician' | 'management' | 'viewer' | 'vendor' | 'sandbox_user';
+export type UserRole = 'admin' | 'technician' | 'management' | 'viewer' | 'vendor' | 'requester' | 'sandbox_user';
 
 export interface UserProfile {
   uid: string;
