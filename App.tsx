@@ -18,6 +18,7 @@ import PublicStatusTracker from './components/PublicStatusTracker';
 import Invoices from './components/Invoices';
 import Tasks from './components/Tasks';
 import Venues from './components/Venues';
+import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import LoginScreen from './components/LoginScreen';
@@ -115,6 +116,7 @@ const AppShell = () => {
                                     <Route path="/planner" element={<Planner />} />
                                     <Route path="/tasks" element={<Tasks />} />
                                     <Route path="/venues" element={<Venues />} />
+                                    <Route path="/reports" element={<Reports />} />
                                     <Route path="/staff" element={<ProtectedRoute requiredRole="technician"><StaffView /></ProtectedRoute>} />
                                     <Route path="/settings" element={<ProtectedRoute requiredRole="technician"><Settings /></ProtectedRoute>} />
                                     <Route path="*" element={<Navigate to="/" replace />} />

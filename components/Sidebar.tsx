@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MonitorSmartphone, Database, Shield, LayoutDashboard, List, ShoppingBag, Wrench, Receipt, CalendarCheck, Users, Settings as SettingsIcon, X, ClipboardList, LifeBuoy, Box, Building2, Presentation } from 'lucide-react';
+import { MonitorSmartphone, Database, Shield, LayoutDashboard, List, ShoppingBag, Wrench, Receipt, CalendarCheck, Users, Settings as SettingsIcon, X, ClipboardList, LifeBuoy, Box, Building2, Presentation, BarChart3 } from 'lucide-react';
 import { getSandboxStatus, getCurrentUserProfile } from '../services/storageService';
 
 interface SidebarProps {
@@ -78,6 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ notificationCount, isOpen, onClose })
              </div>
           </Link>
           <Link to="/invoices" className={linkClass('/invoices')} onClick={onClose}><Receipt size={18} /> Invoices</Link>
+          <Link to="/reports" className={linkClass('/reports')} onClick={onClose}><BarChart3 size={18} /> Reports & Backup</Link>
           
           {canEdit && (
             <>
