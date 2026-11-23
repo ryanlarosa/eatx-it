@@ -135,17 +135,40 @@ export interface Asset {
   lastUpdated: string;
 }
 
+export type TaskStatus = 'Pending' | 'In Progress' | 'Waiting on Vendor' | 'Completed';
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical';
+
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'Pending' | 'In Progress' | 'Completed';
-  priority: 'Low' | 'Medium' | 'High';
-  assignedTo?: string; // Name of IT staff
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignedTo?: string; // Name of IT staff (e.g. Ryan / Diego)
+  assignedToUid?: string;
+  venue?: string; // Venue / Location name
+  venueId?: string;
+  vendor?: string; // Assigned vendor name
+  vendorId?: string;
+  linkedTicketId?: string; // Internal Help Desk ticket ref
+  externalTicketRef?: string; // External ref (Bayzat, ISP, vendor ticket)
+  resolutionNotes?: string;
   dueDate?: string;
+  completedAt?: string;
   createdAt: string;
   createdBy: string;
   checklist?: { id: string; text: string; done: boolean }[];
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  category: string; // Network, POS, CCTV, ISP, Hardware, Printers, Other
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  createdAt: string;
 }
 
 export interface AppConfig {
