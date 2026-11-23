@@ -16,7 +16,7 @@ import PublicReportIssue from './components/PublicReportIssue';
 import PublicAssetRequest from './components/PublicAssetRequest';
 import PublicStatusTracker from './components/PublicStatusTracker';
 import Invoices from './components/Invoices';
-import Tasks from './components/Tasks';
+import TicketsAndTasks from './components/TicketsAndTasks';
 import Venues from './components/Venues';
 import Reports from './components/Reports';
 import Sidebar from './components/Sidebar';
@@ -144,10 +144,11 @@ const AppShell = () => {
                                     <Route path="/executive" element={<ExecutiveDashboard />} />
                                     <Route path="/assets" element={<AssetRegistryWrapper assets={assets} view={view} setView={setView} editingAsset={editingAsset} setEditingAsset={setEditingAsset} handleSaveAsset={handleSaveAsset} handleDuplicate={handleDuplicate} handleDeleteAsset={handleDeleteAsset} loading={loading} canEdit={canEdit} />} />
                                     <Route path="/requests" element={<AssetRequests />} />
-                                    <Route path="/repairs" element={<RepairTickets />} />
+                                    <Route path="/tickets" element={<TicketsAndTasks />} />
+                                    <Route path="/repairs" element={<Navigate to="/tickets" replace />} />
+                                    <Route path="/tasks" element={<Navigate to="/tickets" replace />} />
                                     <Route path="/invoices" element={<Invoices />} />
                                     <Route path="/planner" element={<Planner />} />
-                                    <Route path="/tasks" element={<Tasks />} />
                                     <Route path="/venues" element={<Venues />} />
                                     <Route path="/reports" element={<Reports />} />
                                     <Route path="/staff" element={<ProtectedRoute requiredRole="technician"><StaffView /></ProtectedRoute>} />

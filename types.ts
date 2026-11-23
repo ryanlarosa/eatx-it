@@ -64,20 +64,30 @@ export interface PendingHandover {
   targetName?: string;
 }
 
+export type WorkItemType = 'Ticket' | 'Task';
+export type WorkItemStatus = 'New' | 'Open' | 'In Progress' | 'Waiting on Vendor' | 'Waiting for Parts' | 'Resolved' | 'Rejected';
+
 export interface IncidentReport {
   id: string;
   ticketNumber: string;
+  itemType?: WorkItemType; // 'Ticket' (staff-reported) or 'Task' (internal IT work)
+  title?: string; // Concise title; falls back to assetName for legacy tickets
   assetId?: string;
   assetName: string; // Fallback if asset is generic or not in system
   deviceType?: string; // e.g. Laptop, iPad
   reportedSerial?: string; // Optional user input
   imageBase64?: string; // Evidence photo
   location: string;
-  reportedBy: string; // Staff name
+  reportedBy: string; // Staff name or creator
   reporterEmail?: string; // Email for updates
+  assignedTo?: string; // Owner: Ryan / Diego
+  vendor?: string; // Assigned vendor name
+  dueDate?: string; // ISO date YYYY-MM-DD
+  externalTicketRef?: string; // Bayzat / ISP / Vendor ticket reference
+  checklist?: { id: string; text: string; done: boolean }[];
   description: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
-  status: 'New' | 'Open' | 'In Progress' | 'Waiting for Parts' | 'Resolved' | 'Rejected';
+  status: WorkItemStatus;
   createdAt: string;
   resolvedAt?: string;
   resolutionNotes?: string;

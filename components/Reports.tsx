@@ -125,7 +125,7 @@ const Reports: React.FC = () => {
     return { expired, within30, within90, valid, none };
   }, [assets]);
 
-  // 3. Workload by Owner
+  // 3. Workload by Owner (Unified Tickets & Tasks queue)
   const ownerWorkload = useMemo(() => {
     const map = new Map<
       string,
@@ -134,10 +134,10 @@ const Reports: React.FC = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    tasks.forEach((t) => {
+    incidents.forEach((t) => {
       const owner = t.assignedTo || "Unassigned";
       const cur = map.get(owner) || { owner, open: 0, completed: 0, overdue: 0 };
-      if (t.status === "Completed") {
+      if (t.status === "Resolved" || t.status === "Rejected") {
         cur.completed++;
       } else {
         cur.open++;
@@ -150,7 +150,7 @@ const Reports: React.FC = () => {
       map.set(owner, cur);
     });
     return Array.from(map.values());
-  }, [tasks]);
+  }, [incidents]);
 
   // --- EXPORTS ---
 
@@ -195,19 +195,34 @@ const Reports: React.FC = () => {
         })
       );
 
-    // Sheet 3: IT Tasks & Projects
-    const s3 = wb.addWorksheet("IT Tasks");
+    // Sheet 3: Unified Tickets & Tasks
+    const s3 = wb.addWorksheet("Tickets & Tasks");
     s3.columns = [
-      { header: "Title", key: "title", width: 34 },
+      { header: "Ref", key: "ticketNumber", width: 16 },
+      { header: "Type", key: "itemType", width: 10 },
+      { header: "Subject", key: "subject", width: 34 },
       { header: "Owner", key: "assignedTo", width: 14 },
       { header: "Priority", key: "priority", width: 12 },
       { header: "Status", key: "status", width: 18 },
-      { header: "Venue", key: "venue", width: 20 },
+      { header: "Venue", key: "location", width: 20 },
       { header: "Vendor", key: "vendor", width: 18 },
       { header: "Due Date", key: "dueDate", width: 14 },
       { header: "Resolution Notes", key: "resolutionNotes", width: 36 },
     ];
-    tasks.forEach((t) => s3.addRow(t));
+    incidents.forEach((t) =>
+      s3.addRow({
+        ticketNumber: t.ticketNumber,
+        itemType: t.itemType || "Ticket",
+        subject: t.title || t.assetName,
+        assignedTo: t.assignedTo || "Unassigned",
+        priority: t.priority,
+        status: t.status,
+        location: t.location,
+        vendor: t.vendor || "",
+        dueDate: t.dueDate || "",
+        resolutionNotes: t.resolutionNotes || "",
+      })
+    );
 
     // Sheet 4: Venues & Visits
     const s4 = wb.addWorksheet("Venue Visits");

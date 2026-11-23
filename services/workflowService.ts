@@ -1,17 +1,18 @@
 
 // Fix: Cleaned up modular imports from firebase/firestore to resolve module resolution issues
-import { 
-  addDoc, 
-  collection, 
-  doc, 
-  getDoc, 
-  getDocs, 
-  onSnapshot, 
-  orderBy, 
-  query, 
-  updateDoc, 
-  where, 
-  writeBatch 
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
 } from "firebase/firestore";
 import { db, getColName, snapToData, sanitizeData, createNotification, handleFirestoreError, OperationType } from "./firebase";
 import { sendSystemEmail } from "./configService";
@@ -82,8 +83,20 @@ export const listenToIncidents = (cb: (tickets: IncidentReport[]) => void) => {
 };
 
 export const createIncidentReport = async (report: Partial<IncidentReport>) => {
-  const ticketNumber = `TKT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-  const newReport = { ...report, ticketNumber, status: "New", createdAt: new Date().toISOString() };
+  const isTask = report.itemType === "Task";
+  const prefix = isTask ? "TSK" : "TKT";
+  const ticketNumber =
+    report.ticketNumber ||
+    `${prefix}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const newReport = {
+    ...report,
+    itemType: report.itemType || "Ticket",
+    title: report.title || report.assetName || "Untitled IT Item",
+    assetName: report.assetName || report.title || "General IT",
+    ticketNumber,
+    status: report.status || (isTask ? "Open" : "New"),
+    createdAt: new Date().toISOString(),
+  };
   const path = getColName("incidents");
   try {
     await addDoc(collection(db, path), sanitizeData(newReport));
@@ -91,13 +104,16 @@ export const createIncidentReport = async (report: Partial<IncidentReport>) => {
     handleFirestoreError(error, OperationType.CREATE, path);
   }
 
-  try {
-    await createNotification("warning", "IT Hub: New Incident", `${report.reportedBy} reported issue at ${report.location}.`, "/repairs");
-    await sendSystemEmail("IT Hub: New Incident Report", `${report.reportedBy} reported: ${report.description}. Ref: ${ticketNumber}`, window.location.origin + "/#/repairs");
-    if (report.reporterEmail) {
-      await sendSystemEmail("Incident Reported: EatX IT Hub", `Hi ${report.reportedBy}, your issue at ${report.location} is logged. Ref: ${ticketNumber}`, window.location.origin + "/#/track", report.reporterEmail, true);
-    }
-  } catch (e) {}
+  // Only fire staff portal alerts for incoming Support Tickets (not internal IT tasks)
+  if (!isTask) {
+    try {
+      await createNotification("warning", "New Support Ticket", `${report.reportedBy} reported an issue at ${report.location}.`, "/tickets");
+      await sendSystemEmail("EATX IT: New Support Ticket", `${report.reportedBy} reported: ${report.description}. Ref: ${ticketNumber}`, window.location.origin + "/#/tickets");
+      if (report.reporterEmail) {
+        await sendSystemEmail("Ticket Received: EATX IT", `Hi ${report.reportedBy}, your issue at ${report.location} is logged. Ref: ${ticketNumber}`, window.location.origin + "/#/track", report.reporterEmail, true);
+      }
+    } catch (e) {}
+  }
 };
 
 export const updateIncidentReport = async (id: string, updates: Partial<IncidentReport>, updateAssetStatus: boolean = false) => {
@@ -140,6 +156,15 @@ export const processAssetReplacement = async (ticketId: string, oldAssetId: stri
     await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, "multiple_collections");
+  }
+};
+
+export const deleteIncidentReport = async (id: string) => {
+  const path = getColName("incidents");
+  try {
+    await deleteDoc(doc(db, path, id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
   }
 };
 

@@ -40,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
     };
   }, []);
 
-  const openTickets = useMemo(
+  const openWorkItems = useMemo(
     () =>
       tickets.filter(
         (t) => t.status !== "Resolved" && t.status !== "Rejected"
@@ -48,26 +48,31 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
     [tickets]
   );
 
+  const openTickets = useMemo(
+    () => openWorkItems.filter((t) => (t.itemType || "Ticket") === "Ticket"),
+    [openWorkItems]
+  );
+
   const criticalTickets = useMemo(
-    () => openTickets.filter((t) => t.priority === "Critical"),
-    [openTickets]
+    () => openWorkItems.filter((t) => t.priority === "Critical"),
+    [openWorkItems]
   );
 
   const openTasks = useMemo(
-    () => tasks.filter((t) => t.status !== "Completed"),
-    [tasks]
+    () => openWorkItems.filter((t) => t.itemType === "Task"),
+    [openWorkItems]
   );
 
   const overdueTaskCount = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return openTasks.filter((t) => {
+    return openWorkItems.filter((t) => {
       if (!t.dueDate) return false;
       const d = new Date(t.dueDate);
       d.setHours(0, 0, 0, 0);
       return d < today;
     }).length;
-  }, [openTasks]);
+  }, [openWorkItems]);
 
   const activeProjects = useMemo(
     () => projects.filter((p) => p.status !== "Completed"),
@@ -330,10 +335,10 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
                         className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors"
                       >
                         <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
-                          {t.title}
+                          {t.title || t.assetName}
                         </td>
                         <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
-                          {t.venue || "—"}
+                          {t.location || "—"}
                         </td>
                         <td className="px-4 py-2.5 text-[#172B4D] dark:text-[#CBD5E1]">
                           {t.assignedTo || "Unassigned"}

@@ -35,8 +35,9 @@ const ROUTE_META: Record<string, { section: string; label: string }> = {
   "/assets": { section: "Infrastructure", label: "Asset Inventory" },
   "/venues": { section: "Infrastructure", label: "Venues & Sites" },
   "/staff": { section: "Infrastructure", label: "Employees & Handovers" },
-  "/tasks": { section: "Service & Delivery", label: "Tasks" },
-  "/repairs": { section: "Service & Delivery", label: "Help Desk" },
+  "/tickets": { section: "Service & Delivery", label: "Tickets & Tasks" },
+  "/tasks": { section: "Service & Delivery", label: "Tickets & Tasks" },
+  "/repairs": { section: "Service & Delivery", label: "Tickets & Tasks" },
   "/planner": { section: "Service & Delivery", label: "Projects" },
   "/requests": { section: "Service & Delivery", label: "Procurement" },
   "/invoices": { section: "Administration", label: "Invoices" },
@@ -165,9 +166,8 @@ const QuickActionsMenu = () => {
 
   const actions = [
     { label: "Register Asset", to: "/assets?new=1", icon: Box },
-    { label: "Create IT Task", to: "/tasks", icon: ClipboardList },
+    { label: "New Ticket / Task", to: "/tickets", icon: ClipboardList },
     { label: "New IT Project", to: "/planner", icon: FolderKanban },
-    { label: "Log Help Desk Ticket", to: "/repairs", icon: LifeBuoy },
     { label: "Log Venue Site Visit", to: "/venues", icon: Building2 },
   ];
 

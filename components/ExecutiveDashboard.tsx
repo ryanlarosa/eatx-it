@@ -47,20 +47,20 @@ const ExecutiveDashboard: React.FC = () => {
   );
 
   const outstandingTasks = useMemo(
-    () => tasks.filter((t) => t.status !== "Completed"),
-    [tasks]
+    () => openTickets.filter((t) => t.itemType === "Task"),
+    [openTickets]
   );
 
   const overdueTasks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return outstandingTasks.filter((t) => {
+    return openTickets.filter((t) => {
       if (!t.dueDate) return false;
       const d = new Date(t.dueDate);
       d.setHours(0, 0, 0, 0);
       return d < today;
     });
-  }, [outstandingTasks]);
+  }, [openTickets]);
 
   const activeProjects = useMemo(
     () => projects.filter((p) => p.status !== "Completed"),
@@ -402,7 +402,7 @@ const ExecutiveDashboard: React.FC = () => {
                   {overdueTasks.slice(0, 5).map((t) => (
                     <tr key={t.id}>
                       <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
-                        {t.title}
+                        {t.title || t.assetName}
                       </td>
                       <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
                         {t.assignedTo || "Unassigned"}
