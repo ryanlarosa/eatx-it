@@ -376,10 +376,10 @@ const Tasks: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">
-            IT Operations & Tasks
+          <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">
+            Tasks
           </h1>
-          <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
+          <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
             Track daily IT operations, venue issues, vendor work, and ticket resolutions.
           </p>
         </div>
@@ -411,9 +411,9 @@ const Tasks: React.FC = () => {
           {canEdit && (
             <button
               onClick={openCreate}
-              className="px-4 py-2 bg-slate-900 dark:bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-black dark:hover:bg-blue-700 flex items-center gap-2 shadow-sm"
+              className="px-3.5 py-2 bg-[#0052CC] hover:bg-[#0043A8] text-white text-[13px] font-medium rounded flex items-center gap-1.5 transition-colors"
             >
-              <Plus size={16} /> New Task
+              <Plus size={15} /> New Task
             </button>
           )}
         </div>

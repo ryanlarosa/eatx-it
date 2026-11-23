@@ -57,12 +57,12 @@ const AssetRegistryWrapper = ({ assets, view, setView, editingAsset, setEditingA
         <div className="space-y-5">
             <div className="flex justify-between items-center">
                 <div>
-                  <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">Asset Registry</h1>
-                  <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">Centralized hardware inventory across EATX venues and offices.</p>
+                  <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">Asset Inventory</h1>
+                  <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">Centralized hardware inventory across EATX venues and offices.</p>
                 </div>
                 {canEdit && (
-                    <button onClick={() => { setEditingAsset(null); setView('form'); }} className="bg-[#111318] text-white dark:bg-blue-600 px-3.5 py-2 rounded-md hover:bg-black dark:hover:bg-blue-500 flex items-center gap-2 font-medium transition-colors text-xs sm:text-sm">
-                        <PlusCircle size={16} /> <span className="hidden sm:inline">Add Asset</span><span className="sm:hidden">Add</span>
+                    <button onClick={() => { setEditingAsset(null); setView('form'); }} className="bg-[#0052CC] hover:bg-[#0043A8] text-white px-3.5 py-2 rounded flex items-center gap-2 font-medium transition-colors text-[13px]">
+                        <PlusCircle size={15} /> <span className="hidden sm:inline">Add Asset</span><span className="sm:hidden">Add</span>
                     </button>
                 )}
             </div>
@@ -108,7 +108,7 @@ const AppShell = () => {
 
   return (
     <Router>
-      <div className="min-h-screen bg-[#F4F5F7] dark:bg-[#0B0D11] text-[#111318] dark:text-[#F1F3F7] font-sans transition-colors duration-200 overflow-x-hidden">
+      <div className="min-h-screen bg-[#F5F7FA] dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] font-sans overflow-x-hidden">
         <Routes>
             {/* Public Routes are top-level and centered */}
             <Route path="/sign/:id" element={<SignHandover />} />
@@ -126,7 +126,7 @@ const AppShell = () => {
                       isCollapsed={isSidebarCollapsed}
                       onClose={() => setIsSidebarOpen(false)}
                     />
-                    <div className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ease-out h-full ${isSidebarCollapsed ? 'md:ml-[68px]' : 'md:ml-60'}`}>
+                    <div className={`flex-1 flex flex-col min-w-0 transition-all duration-200 ease-out h-full ${isSidebarCollapsed ? 'md:ml-[60px]' : 'md:ml-[236px]'}`}>
                         <TopBar
                           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                           isSidebarCollapsed={isSidebarCollapsed}
@@ -138,7 +138,7 @@ const AppShell = () => {
                           onLogout={logoutUser}
                         />
                         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-                            <div className="max-w-[1400px] mx-auto pb-10">
+                            <div className="max-w-[1440px] mx-auto pb-10">
                                 <Routes>
                                     <Route path="/" element={isReadOnlyRole(user) ? <ExecutiveDashboard /> : <Dashboard stats={getStats(assets)} allAssets={assets} />} />
                                     <Route path="/executive" element={<ExecutiveDashboard />} />

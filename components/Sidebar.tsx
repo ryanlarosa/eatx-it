@@ -51,22 +51,22 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const groups: { title: string; items: NavItem[] }[] = [
     {
-      title: "Overview",
+      title: "Dashboards",
       items: [
-        { to: "/", label: "Operations", icon: LayoutDashboard },
-        { to: "/executive", label: "Executive View", icon: Presentation },
+        { to: "/", label: "IT Operations", icon: LayoutDashboard },
+        { to: "/executive", label: "Executive Summary", icon: Presentation },
       ],
     },
     {
       title: "Infrastructure",
       items: [
-        { to: "/assets", label: "Assets", icon: Box },
+        { to: "/assets", label: "Asset Inventory", icon: Box },
         { to: "/venues", label: "Venues & Sites", icon: Building2 },
-        { to: "/staff", label: "Employees", icon: Users, opsOnly: true },
+        { to: "/staff", label: "Employees & Handovers", icon: Users, opsOnly: true },
       ],
     },
     {
-      title: "Workflows",
+      title: "Service & Delivery",
       items: [
         { to: "/tasks", label: "Tasks", icon: ClipboardList },
         { to: "/repairs", label: "Help Desk", icon: LifeBuoy },
@@ -80,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ],
     },
     {
-      title: "Governance",
+      title: "Administration",
       items: [
         { to: "/invoices", label: "Invoices", icon: Receipt },
         { to: "/reports", label: "Reports & Backup", icon: BarChart3 },
@@ -89,68 +89,49 @@ const Sidebar: React.FC<SidebarProps> = ({
     },
   ];
 
-  const linkClass = (path: string) => {
-    const active = isActive(path);
-    return `group relative flex items-center ${
-      isCollapsed ? "md:justify-center md:px-0" : "px-2.5"
-    } gap-2.5 py-2 rounded-md text-[13px] font-medium transition-colors ${
-      active
-        ? "bg-[#111318] text-white dark:bg-[#1D2330] dark:text-[#F1F3F7]"
-        : "text-[#5A6270] hover:bg-[#EBEEF2] hover:text-[#111318] dark:text-[#8B94A5] dark:hover:bg-[#181C25] dark:hover:text-[#F1F3F7]"
-    }`;
-  };
-
   return (
     <>
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-[2px]"
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-[#0E1117] border-r border-[#E4E6EB] dark:border-[#222733] transition-all duration-200 ease-out
-          w-60 ${isCollapsed ? "md:w-[68px]" : "md:w-60"}
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#141A24] text-[#CBD5E1] border-r border-[#242E40] transition-all duration-200 ease-out
+          w-[236px] ${isCollapsed ? "md:w-[60px]" : "md:w-[236px]"}
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
-        {/* Brand Header */}
+        {/* Classic Enterprise Console Header */}
         <div
-          className={`h-14 flex items-center border-b border-[#E4E6EB] dark:border-[#222733] shrink-0 ${
+          className={`h-12 flex items-center border-b border-[#242E40] shrink-0 ${
             isCollapsed ? "px-4 md:justify-center md:px-0" : "px-4 justify-between"
           }`}
         >
-          <Link
-            to="/"
-            onClick={onClose}
-            className="flex items-center gap-2.5 min-w-0"
-          >
-            <div className="w-7 h-7 rounded-md bg-[#111318] dark:bg-blue-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0 tracking-tighter">
-              EX
-            </div>
-            <div className={`${isCollapsed ? "md:hidden" : "block"} min-w-0`}>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-[15px] tracking-tight text-[#111318] dark:text-[#F1F3F7]">
-                  eatx.
-                </span>
-                <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-[#F4F5F7] dark:bg-[#181C25] text-[#5A6270] dark:text-[#8B94A5] border border-[#E4E6EB] dark:border-[#222733]">
-                  IT OPS
-                </span>
+          <Link to="/" onClick={onClose} className="flex items-center gap-2.5 min-w-0">
+            <span className="w-2 h-5 rounded-[2px] bg-[#0052CC] shrink-0" />
+            <div className={`${isCollapsed ? "md:hidden" : "block"} min-w-0 leading-tight`}>
+              <div className="text-[14px] font-bold tracking-tight text-white">
+                EATX IT
+              </div>
+              <div className="text-[11px] text-[#8A99B0] font-normal">
+                Management Console
               </div>
             </div>
           </Link>
 
           <button
             onClick={onClose}
-            className="md:hidden p-1 text-[#5A6270] hover:text-[#111318] dark:text-[#8B94A5] dark:hover:text-white rounded-md"
+            className="md:hidden p-1 text-[#94A3B8] hover:text-white rounded"
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
-        {/* Navigation Groups */}
-        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-5">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-3 space-y-4">
           {groups.map((group) => {
             const visibleItems = group.items.filter(
               (item) => !item.opsOnly || canEdit
@@ -159,14 +140,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             return (
               <div key={group.title}>
                 <div
-                  className={`px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#8C95A6] dark:text-[#5C6475] ${
+                  className={`px-4 mb-1.5 text-[11px] font-semibold text-[#6E7E96] ${
                     isCollapsed ? "md:hidden" : "block"
                   }`}
                 >
                   {group.title}
                 </div>
                 {isCollapsed && (
-                  <div className="hidden md:block h-px bg-[#E4E6EB] dark:bg-[#222733] mx-2 mb-2" />
+                  <div className="hidden md:block h-px bg-[#242E40] mx-3 mb-2" />
                 )}
                 <div className="space-y-0.5">
                   {visibleItems.map((item) => {
@@ -178,17 +159,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         to={item.to}
                         onClick={onClose}
                         title={isCollapsed ? item.label : undefined}
-                        className={linkClass(item.to)}
+                        className={`relative flex items-center ${
+                          isCollapsed ? "md:justify-center md:px-0" : "px-4"
+                        } gap-3 py-2 text-[13px] font-medium transition-colors ${
+                          active
+                            ? "bg-[#1F293B] text-white"
+                            : "text-[#B0BDD0] hover:bg-[#1B2332] hover:text-white"
+                        }`}
                       >
                         {active && (
-                          <span className="hidden md:block absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-r bg-blue-500" />
+                          <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#2684FF]" />
                         )}
                         <Icon
                           size={16}
                           className={`shrink-0 ${
-                            active
-                              ? "text-white dark:text-blue-400"
-                              : "text-[#6B7280] dark:text-[#7E8799] group-hover:text-[#111318] dark:group-hover:text-[#F1F3F7]"
+                            active ? "text-[#4C9AFF]" : "text-[#7C8CA4]"
                           }`}
                         />
                         <span
@@ -200,9 +185,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                         {item.badge && item.badge > 0 ? (
                           <span
-                            className={`font-mono text-[10px] font-semibold px-1.5 py-0.2 rounded bg-red-500 text-white ${
+                            className={`text-[11px] font-semibold px-1.5 rounded bg-[#DE350B] text-white ${
                               isCollapsed
-                                ? "md:absolute md:top-1 md:right-1 md:w-2 md:h-2 md:p-0 md:rounded-full md:text-[0px]"
+                                ? "md:absolute md:top-1.5 md:right-2 md:w-2 md:h-2 md:p-0 md:rounded-full md:text-[0px]"
                                 : ""
                             }`}
                           >
@@ -218,34 +203,26 @@ const Sidebar: React.FC<SidebarProps> = ({
           })}
         </nav>
 
-        {/* Compact Status Footer */}
-        <div className="p-3 border-t border-[#E4E6EB] dark:border-[#222733] shrink-0">
+        {/* Subtle Footer */}
+        <div className="px-4 py-2.5 border-t border-[#242E40] shrink-0">
           <div
             className={`flex items-center ${
               isCollapsed ? "md:justify-center" : "justify-between"
-            } px-2 py-1.5 rounded-md bg-[#F8F9FB] dark:bg-[#141821] border border-[#E4E6EB] dark:border-[#222733]`}
+            } text-[11px] text-[#8A99B0]`}
             title={isSandbox ? "Sandbox Environment" : "Production Environment"}
           >
             <div className="flex items-center gap-2 min-w-0">
               <span
                 className={`w-2 h-2 rounded-full shrink-0 ${
-                  isSandbox ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                  isSandbox ? "bg-[#FFAB00]" : "bg-[#36B37E]"
                 }`}
               />
-              <span
-                className={`text-[11px] font-medium text-[#5A6270] dark:text-[#8B94A5] truncate ${
-                  isCollapsed ? "md:hidden" : "block"
-                }`}
-              >
-                {isSandbox ? "Sandbox" : "Production"}
+              <span className={`${isCollapsed ? "md:hidden" : "block"} truncate`}>
+                {isSandbox ? "Sandbox Mode" : "Production"}
               </span>
             </div>
-            <span
-              className={`font-mono text-[10px] text-[#8C95A6] dark:text-[#5C6475] ${
-                isCollapsed ? "md:hidden" : "block"
-              }`}
-            >
-              v2.0
+            <span className={`${isCollapsed ? "md:hidden" : "block"} text-[#6E7E96]`}>
+              EATX Group
             </span>
           </div>
         </div>

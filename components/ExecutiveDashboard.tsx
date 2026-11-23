@@ -10,11 +10,9 @@ import {
   getWarrantyStatus,
 } from "../services/storageService";
 import { useAppData } from "../context/AppDataContext";
-import { ArrowUpRight, CheckCircle2, Clock } from "lucide-react";
-import { MetricTile, OpsPanel, StatusPill } from "./ui/OpsPrimitives";
 
 const ExecutiveDashboard: React.FC = () => {
-  const { assets, projects, notifications } = useAppData();
+  const { assets, projects } = useAppData();
   const [incidents, setIncidents] = useState<IncidentReport[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -91,7 +89,7 @@ const ExecutiveDashboard: React.FC = () => {
     return list;
   }, [projects]);
 
-  const expiringWarrantyAssets = useMemo(() => {
+  const expiringWarranties = useMemo(() => {
     return assets
       .filter((a) => {
         if (a.status === "Retired") return false;
@@ -107,22 +105,25 @@ const ExecutiveDashboard: React.FC = () => {
   const health = useMemo(() => {
     if (criticalTickets.length > 0) {
       return {
-        tone: "red" as const,
-        label: "Critical Issues Active",
-        summary: `${criticalTickets.length} critical ticket(s) require immediate attention.`,
+        border: "border-l-[#DE350B]",
+        badgeText: "text-[#DE350B]",
+        title: "Critical attention required",
+        summary: `${criticalTickets.length} critical ticket(s) currently open across EATX venues.`,
       };
     }
     if (overdueTasks.length > 0 || pendingDecisions.length > 0) {
       return {
-        tone: "amber" as const,
-        label: "Operational — Action Items Pending",
-        summary: `${overdueTasks.length} overdue task(s) • ${pendingDecisions.length} leadership decision(s) awaiting review.`,
+        border: "border-l-[#FF991F]",
+        badgeText: "text-[#D97706]",
+        title: "Operational with pending items",
+        summary: `${overdueTasks.length} overdue task(s) and ${pendingDecisions.length} item(s) awaiting management decision.`,
       };
     }
     return {
-      tone: "emerald" as const,
-      label: "All Systems Operational",
-      summary: `${venues.length || 28} venues monitored • ${activeProjects.length} active project(s).`,
+      border: "border-l-[#00875A]",
+      badgeText: "text-[#00875A] dark:text-[#36B37E]",
+      title: "All IT operations healthy",
+      summary: `${venues.length || 28} venues monitored, ${activeProjects.length} active project(s), zero critical incidents.`,
     };
   }, [
     criticalTickets.length,
@@ -132,7 +133,7 @@ const ExecutiveDashboard: React.FC = () => {
     activeProjects.length,
   ]);
 
-  const computeProjectProgress = (p: (typeof projects)[number]) => {
+  const computeProgress = (p: (typeof projects)[number]) => {
     const ms = p.milestones || [];
     if (ms.length > 0) {
       return Math.round(
@@ -144,290 +145,364 @@ const ExecutiveDashboard: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      {/* Executive Status Strip */}
-      <div className="bg-white dark:bg-[#12151C] border border-[#E4E6EB] dark:border-[#222733] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-lg font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">
-              Executive IT Summary
-            </h1>
-            <StatusPill
-              label={health.label}
-              tone={health.tone}
-              pulse={health.tone === "red"}
-            />
-          </div>
-          <p className="text-xs text-[#5A6270] dark:text-[#8B94A5]">
-            {health.summary}
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <h1 className="text-[20px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tracking-tight">
+            Executive IT Summary
+          </h1>
+          <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
+            EATX Group IT operations, project delivery, and asset accountability.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="font-mono text-[11px] text-[#8C95A6]">
-            {new Date().toLocaleDateString()}
-          </span>
-          <Link
-            to="/venues"
-            className="h-7 px-2.5 rounded-md border border-[#E4E6EB] dark:border-[#222733] bg-[#F8F9FB] dark:bg-[#181C25] text-[#111318] dark:text-[#F1F3F7] font-medium inline-flex items-center gap-1"
-          >
-            {venues.length} Venues <ArrowUpRight size={13} />
-          </Link>
+        <div className="text-xs text-[#6B778C]">
+          As of {new Date().toLocaleDateString()}
         </div>
       </div>
 
-      {/* Executive KPI Bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricTile
-          label="Active Projects"
-          value={activeProjects.length}
-          subtext={`${pendingDecisions.length} pending decision(s)`}
-          tone="blue"
-          to="/planner"
-        />
-        <MetricTile
-          label="Outstanding Tasks"
-          value={outstandingTasks.length}
-          subtext={`${overdueTasks.length} overdue`}
-          tone={overdueTasks.length > 0 ? "red" : "emerald"}
-          alert={overdueTasks.length > 0}
-          to="/tasks"
-        />
-        <MetricTile
-          label="Critical Issues"
-          value={criticalTickets.length}
-          subtext={`${openTickets.length} total open tickets`}
-          tone={criticalTickets.length > 0 ? "red" : "emerald"}
-          alert={criticalTickets.length > 0}
-          to="/repairs"
-        />
-        <MetricTile
-          label="Asset Portfolio"
-          value={assetStats.totalAssets}
-          subtext={`AED ${assetStats.totalValue.toLocaleString()}`}
-          tone="slate"
-          to="/assets"
-        />
+      {/* Operational Status Bar */}
+      <div
+        className={`bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] border-l-4 ${health.border} rounded p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2`}
+      >
+        <div>
+          <div className={`text-[13px] font-semibold ${health.badgeText}`}>
+            {health.title}
+          </div>
+          <div className="text-[13px] text-[#42526E] dark:text-[#CBD5E1] mt-0.5">
+            {health.summary}
+          </div>
+        </div>
+        <Link
+          to="/venues"
+          className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline shrink-0"
+        >
+          View {venues.length} venues
+        </Link>
       </div>
 
-      {/* Decisions Required */}
-      <OpsPanel
-        title={`Management Decisions Required (${pendingDecisions.length})`}
-        action={
+      {/* Unified Executive Summary Strip */}
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
+        <div className="p-4">
+          <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
+            Active projects
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {activeProjects.length}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5">
+            {pendingDecisions.length} awaiting decision
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
+            Outstanding tasks
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {outstandingTasks.length}
+          </div>
+          <div
+            className={`text-[12px] mt-0.5 ${
+              overdueTasks.length > 0
+                ? "text-[#DE350B] font-medium"
+                : "text-[#6B778C]"
+            }`}
+          >
+            {overdueTasks.length} overdue
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
+            Critical issues
+          </div>
+          <div
+            className={`text-[22px] font-semibold tabular-nums mt-1 ${
+              criticalTickets.length > 0
+                ? "text-[#DE350B]"
+                : "text-[#172B4D] dark:text-[#E6EDF5]"
+            }`}
+          >
+            {criticalTickets.length}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5">
+            {openTickets.length} open help desk tickets
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
+            IT asset portfolio
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {assetStats.totalAssets}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5">
+            AED {assetStats.totalValue.toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      {/* Management Decisions Table */}
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+          <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+            Items awaiting management decision ({pendingDecisions.length})
+          </h2>
           <Link
             to="/planner"
-            className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+            className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
           >
-            Projects <ArrowUpRight size={12} />
+            Open projects
           </Link>
-        }
-      >
+        </div>
         {pendingDecisions.length === 0 ? (
-          <div className="text-xs text-[#5A6270] dark:text-[#8B94A5] flex items-center gap-2 py-1">
-            <CheckCircle2 size={14} className="text-emerald-500" />
-            No pending decisions requiring management approval.
+          <div className="px-4 py-5 text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
+            No items currently awaiting management sign-off.
           </div>
         ) : (
-          <div className="divide-y divide-[#E4E6EB] dark:divide-[#222733] -my-1">
-            {pendingDecisions.map((d) => (
-              <div
-                key={d.id}
-                className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-              >
-                <div>
-                  <div className="font-mono text-[10px] uppercase text-amber-600 dark:text-amber-400 font-semibold">
-                    {d.projectName}
-                  </div>
-                  <div className="text-sm font-medium text-[#111318] dark:text-[#F1F3F7] mt-0.5">
-                    {d.title}
-                  </div>
-                  {d.details && (
-                    <div className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
-                      {d.details}
-                    </div>
-                  )}
-                </div>
-                <StatusPill label="Pending" tone="amber" />
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C]">
+                  <th className="px-4 py-2">Project</th>
+                  <th className="px-4 py-2">Decision required</th>
+                  <th className="px-4 py-2">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {pendingDecisions.map((d) => (
+                  <tr key={d.id}>
+                    <td className="px-4 py-2.5 font-medium text-[#0052CC] dark:text-[#4C9AFF] whitespace-nowrap">
+                      {d.projectName}
+                    </td>
+                    <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                      {d.title}
+                    </td>
+                    <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                      {d.details || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </OpsPanel>
+      </div>
 
-      {/* Projects & Risks */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <OpsPanel
-          title="Active IT Projects"
-          action={
+      {/* Active Projects & Risks Split */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+            <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Active IT projects
+            </h2>
             <Link
               to="/planner"
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
             >
               View all
             </Link>
-          }
-        >
-          {activeProjects.length === 0 ? (
-            <div className="text-xs text-[#8C95A6] py-3">No active projects.</div>
-          ) : (
-            <div className="divide-y divide-[#E4E6EB] dark:divide-[#222733] -my-1">
-              {activeProjects.slice(0, 5).map((p) => {
-                const pct = computeProjectProgress(p);
-                return (
-                  <div key={p.id} className="py-3 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium text-[#111318] dark:text-[#F1F3F7] truncate">
-                        {p.name}
-                      </span>
-                      <span className="font-mono text-xs font-semibold tabular-nums text-blue-600 dark:text-blue-400">
-                        {pct}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#F4F5F7] dark:bg-[#181C25] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-blue-500 rounded-full"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[11px] text-[#8C95A6]">
-                      <span>{p.venue || "Multi-Venue"}</span>
-                      <span className="font-mono">Target {p.targetDate || "TBD"}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </OpsPanel>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C]">
+                  <th className="px-4 py-2">Project</th>
+                  <th className="px-4 py-2">Progress</th>
+                  <th className="px-4 py-2 text-right">Target</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {activeProjects.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="px-4 py-6 text-center text-[#6B778C]"
+                    >
+                      No active projects.
+                    </td>
+                  </tr>
+                ) : (
+                  activeProjects.slice(0, 6).map((p) => {
+                    const pct = computeProgress(p);
+                    return (
+                      <tr key={p.id}>
+                        <td className="px-4 py-2.5">
+                          <div className="font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                            {p.name}
+                          </div>
+                          <div className="text-xs text-[#6B778C]">
+                            {p.venue || "Multi-Venue"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 w-32">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-[#EBECF0] dark:bg-[#242E40] rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-[#0052CC] rounded-full"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className="font-mono text-xs tabular-nums text-[#5E6C84]">
+                              {pct}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-[#5E6C84]">
+                          {p.targetDate || "TBD"}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-        <OpsPanel
-          title="Overdue Tasks & Critical Issues"
-          action={
+        {/* Overdue & Critical */}
+        <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+            <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Overdue tasks & critical issues
+            </h2>
             <Link
               to="/tasks"
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
             >
-              Task Board
+              Tasks
             </Link>
-          }
-        >
+          </div>
           {criticalTickets.length === 0 && overdueTasks.length === 0 ? (
-            <div className="text-xs text-[#5A6270] dark:text-[#8B94A5] flex items-center gap-2 py-2">
-              <CheckCircle2 size={14} className="text-emerald-500" />
-              Zero critical incidents or overdue tasks.
+            <div className="px-4 py-6 text-[13px] text-[#00875A] dark:text-[#36B37E]">
+              No critical issues or overdue tasks.
             </div>
           ) : (
-            <div className="divide-y divide-[#E4E6EB] dark:divide-[#222733] -my-1">
-              {criticalTickets.slice(0, 3).map((t) => (
-                <div key={t.id} className="py-2.5 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="font-mono text-[10px] text-red-600 dark:text-red-400 font-semibold">
-                      {t.ticketNumber} • {t.location}
-                    </div>
-                    <div className="text-sm font-medium text-[#111318] dark:text-[#F1F3F7] truncate">
-                      {t.assetName} — {t.description}
-                    </div>
-                  </div>
-                  <StatusPill label="Critical" tone="red" />
-                </div>
-              ))}
-              {overdueTasks.slice(0, 4).map((t) => (
-                <div key={t.id} className="py-2.5 flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-[#111318] dark:text-[#F1F3F7] truncate">
-                      {t.title}
-                    </div>
-                    <div className="text-xs text-[#5A6270] dark:text-[#8B94A5]">
-                      {t.assignedTo || "Unassigned"} • Due{" "}
-                      <span className="font-mono">{t.dueDate}</span>
-                    </div>
-                  </div>
-                  <StatusPill label="Overdue" tone="red" />
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C]">
+                    <th className="px-4 py-2">Item</th>
+                    <th className="px-4 py-2">Owner / Venue</th>
+                    <th className="px-4 py-2 text-right">Flag</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                  {criticalTickets.slice(0, 3).map((t) => (
+                    <tr key={t.id}>
+                      <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                        {t.ticketNumber}: {t.assetName}
+                      </td>
+                      <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                        {t.location}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-xs font-semibold text-[#DE350B]">
+                        Critical
+                      </td>
+                    </tr>
+                  ))}
+                  {overdueTasks.slice(0, 5).map((t) => (
+                    <tr key={t.id}>
+                      <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                        {t.title}
+                      </td>
+                      <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                        {t.assignedTo || "Unassigned"}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-[#DE350B]">
+                        {t.dueDate}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </OpsPanel>
+        </div>
       </div>
 
-      {/* Warranties & Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <OpsPanel
-          title="Warranty Expirations (60 Days)"
-          action={
+      {/* Warranties & Recent Visits */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+            <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Upcoming warranty expirations
+            </h2>
             <Link
               to="/reports"
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
             >
-              Full Forecast
+              Full forecast
             </Link>
-          }
-        >
-          {expiringWarrantyAssets.length === 0 ? (
-            <div className="text-xs text-[#8C95A6] py-2">
-              No hardware warranties expiring within 60 days.
+          </div>
+          {expiringWarranties.length === 0 ? (
+            <div className="px-4 py-5 text-[13px] text-[#6B778C]">
+              No warranties expiring within 60 days.
             </div>
           ) : (
-            <div className="divide-y divide-[#E4E6EB] dark:divide-[#222733] -my-1">
-              {expiringWarrantyAssets.map((a) => {
-                const expired = getWarrantyStatus(a.warrantyExpiry) === "expired";
-                return (
-                  <div
-                    key={a.id}
-                    className="py-2.5 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-[#111318] dark:text-[#F1F3F7] truncate">
+            <table className="w-full text-left border-collapse text-[13px]">
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {expiringWarranties.map((a) => {
+                  const expired = getWarrantyStatus(a.warrantyExpiry) === "expired";
+                  return (
+                    <tr key={a.id}>
+                      <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
                         {a.name}
-                      </div>
-                      <div className="text-xs text-[#5A6270] dark:text-[#8B94A5]">
-                        {a.location} • {a.category}
-                      </div>
-                    </div>
-                    <StatusPill
-                      label={expired ? "Expired" : a.warrantyExpiry || ""}
-                      tone={expired ? "red" : "amber"}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                        {a.location}
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-mono text-xs ${
+                          expired
+                            ? "text-[#DE350B] font-semibold"
+                            : "text-[#D97706]"
+                        }`}
+                      >
+                        {expired ? "Expired" : a.warrantyExpiry}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
-        </OpsPanel>
+        </div>
 
-        <OpsPanel title="Recent IT Activity">
-          {notifications.length === 0 && visits.length === 0 ? (
-            <div className="text-xs text-[#8C95A6] py-2">
-              No recent IT activity recorded.
+        <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+            <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Recent venue site visits
+            </h2>
+            <Link
+              to="/venues"
+              className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
+            >
+              Venues
+            </Link>
+          </div>
+          {visits.length === 0 ? (
+            <div className="px-4 py-5 text-[13px] text-[#6B778C]">
+              No venue site visits logged yet.
             </div>
           ) : (
-            <div className="divide-y divide-[#E4E6EB] dark:divide-[#222733] -my-1">
-              {visits.slice(0, 3).map((v) => (
-                <div key={v.id} className="py-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-blue-600 dark:text-blue-400">
-                      Site Visit • {v.venueName}
-                    </span>
-                    <span className="font-mono text-[10px] text-[#8C95A6] inline-flex items-center gap-1">
-                      <Clock size={10} /> {v.visitDate}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#111318] dark:text-[#F1F3F7] mt-0.5">
-                    {v.technician}: {v.purpose} — {v.findings}
-                  </div>
-                </div>
-              ))}
-              {notifications.slice(0, 4).map((n) => (
-                <div key={n.id} className="py-2.5">
-                  <div className="text-xs font-semibold text-[#111318] dark:text-[#F1F3F7]">
-                    {n.title}
-                  </div>
-                  <div className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
-                    {n.message}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table className="w-full text-left border-collapse text-[13px]">
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {visits.slice(0, 5).map((v) => (
+                  <tr key={v.id}>
+                    <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                      {v.venueName}
+                      <div className="text-xs font-normal text-[#6B778C]">
+                        {v.technician} • {v.purpose}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-mono text-xs text-[#5E6C84]">
+                      {v.visitDate}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-        </OpsPanel>
+        </div>
       </div>
     </div>
   );

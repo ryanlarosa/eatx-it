@@ -8,25 +8,12 @@ import {
   Task,
 } from "../types";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
-import { ArrowUpRight } from "lucide-react";
-import {
   listenToIncidents,
   listenToRequests,
   listenToTasks,
-  getAllUsers,
+  getWarrantyStatus,
 } from "../services/storageService";
-import { MetricTile, OpsPanel, StatusPill } from "./ui/OpsPrimitives";
+import { useAppData } from "../context/AppDataContext";
 
 interface DashboardProps {
   stats: AssetStats;
@@ -34,18 +21,18 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
+  const { projects } = useAppData();
   const [tickets, setTickets] = useState<IncidentReport[]>([]);
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [userCount, setUserCount] = useState(0);
+  const [queueTab, setQueueTab] = useState<"tasks" | "tickets" | "projects">(
+    "tasks"
+  );
 
   useEffect(() => {
     const unsub1 = listenToIncidents(setTickets);
     const unsub2 = listenToRequests(setRequests);
     const unsub3 = listenToTasks(setTasks);
-    getAllUsers()
-      .then((u) => setUserCount(u.length))
-      .catch(() => {});
     return () => {
       unsub1();
       unsub2();
@@ -53,291 +40,578 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
     };
   }, []);
 
-  const openTickets = tickets.filter(
-    (t) => t.status !== "Resolved" && t.status !== "Rejected"
-  ).length;
-  const criticalTickets = tickets.filter(
-    (t) =>
-      t.status !== "Resolved" &&
-      t.status !== "Rejected" &&
-      t.priority === "Critical"
-  ).length;
-  const pendingRequests = requests.filter((r) =>
-    ["New", "Acknowledged", "Pending Finance", "Approved"].includes(r.status)
-  ).length;
-  const pendingTasks = tasks.filter((t) => t.status !== "Completed").length;
-  const overdueTasks = useMemo(() => {
+  const openTickets = useMemo(
+    () =>
+      tickets.filter(
+        (t) => t.status !== "Resolved" && t.status !== "Rejected"
+      ),
+    [tickets]
+  );
+
+  const criticalTickets = useMemo(
+    () => openTickets.filter((t) => t.priority === "Critical"),
+    [openTickets]
+  );
+
+  const openTasks = useMemo(
+    () => tasks.filter((t) => t.status !== "Completed"),
+    [tasks]
+  );
+
+  const overdueTaskCount = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return tasks.filter((t) => {
-      if (t.status === "Completed" || !t.dueDate) return false;
+    return openTasks.filter((t) => {
+      if (!t.dueDate) return false;
       const d = new Date(t.dueDate);
       d.setHours(0, 0, 0, 0);
       return d < today;
     }).length;
-  }, [tasks]);
+  }, [openTasks]);
+
+  const activeProjects = useMemo(
+    () => projects.filter((p) => p.status !== "Completed"),
+    [projects]
+  );
+
+  const pendingRequests = useMemo(
+    () =>
+      requests.filter((r) =>
+        ["New", "Acknowledged", "Pending Finance", "Approved"].includes(
+          r.status
+        )
+      ).length,
+    [requests]
+  );
 
   const storageAssets = Math.max(
     0,
     stats.totalAssets - stats.activeAssets - stats.repairAssets
   );
-  const utilizationPct = Math.round(
-    (stats.activeAssets / (stats.totalAssets || 1)) * 100
-  );
+  const totalSafe = stats.totalAssets || 1;
+  const activePct = Math.round((stats.activeAssets / totalSafe) * 100);
+  const storagePct = Math.round((storageAssets / totalSafe) * 100);
+  const repairPct = Math.max(0, 100 - activePct - storagePct);
 
-  const statusData = [
-    { name: "Active", value: stats.activeAssets, color: "#10b981" },
-    { name: "In Storage", value: storageAssets, color: "#64748b" },
-    { name: "Under Repair", value: stats.repairAssets, color: "#f59e0b" },
-  ].filter((d) => d.value > 0);
-
-  const valueByLocation = useMemo(() => {
-    const map = new Map<string, number>();
+  const venueLedger = useMemo(() => {
+    const map = new Map<string, { name: string; count: number; value: number }>();
     allAssets.forEach((a) => {
-      const loc = a.location || "Unassigned";
-      map.set(loc, (map.get(loc) || 0) + (a.purchaseCost || 0));
+      const name = a.location || "Unassigned";
+      const cur = map.get(name) || { name, count: 0, value: 0 };
+      cur.count++;
+      cur.value += a.purchaseCost || 0;
+      map.set(name, cur);
     });
-    return Array.from(map.entries())
-      .map(([name, value]) => ({ name, value }))
+    return Array.from(map.values())
       .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
+      .slice(0, 7);
   }, [allAssets]);
 
-  const categoryData = useMemo(() => {
-    return (stats.byCategory || [])
-      .slice()
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
-  }, [stats.byCategory]);
+  const warrantyAlerts = useMemo(() => {
+    return allAssets
+      .filter((a) => {
+        if (a.status === "Retired") return false;
+        const st = getWarrantyStatus(a.warrantyExpiry, 60);
+        return st === "expiring" || st === "expired";
+      })
+      .sort((a, b) =>
+        (a.warrantyExpiry || "").localeCompare(b.warrantyExpiry || "")
+      )
+      .slice(0, 5);
+  }, [allAssets]);
 
-  const tooltipStyle = {
-    backgroundColor: "#12151C",
-    borderRadius: "6px",
-    border: "1px solid #222733",
-    color: "#F1F3F7",
-    fontSize: "12px",
+  const computeProjectProgress = (p: (typeof projects)[number]) => {
+    const ms = p.milestones || [];
+    if (ms.length > 0) {
+      return Math.round(
+        (ms.filter((m) => m.status === "Completed").length / ms.length) * 100
+      );
+    }
+    return p.progress || 0;
+  };
+
+  const priorityColor = (p: string) => {
+    if (p === "Critical") return "text-[#DE350B] font-semibold";
+    if (p === "High") return "text-[#D97706] font-medium";
+    return "text-[#5E6C84] dark:text-[#94A3B8]";
   };
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Page Title Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[#111318] dark:text-[#F1F3F7]">
-            IT Operations Console
+          <h1 className="text-[20px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tracking-tight">
+            IT Operations
           </h1>
-          <p className="text-xs text-[#5A6270] dark:text-[#8B94A5] mt-0.5">
-            Live infrastructure telemetry, help desk queues, tasks, and fleet capital.
+          <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
+            Operational queues, hardware fleet status, and venue asset allocation.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusPill
-            label={`${userCount} Active Users`}
-            tone="emerald"
-          />
+        <div className="flex items-center gap-2 text-[13px]">
           <Link
             to="/executive"
-            className="h-7 px-2.5 rounded-md border border-[#E4E6EB] dark:border-[#222733] bg-white dark:bg-[#12151C] text-xs font-medium text-[#111318] dark:text-[#F1F3F7] hover:border-[#C7CCD6] dark:hover:border-[#343C4F] inline-flex items-center gap-1 transition-colors"
+            className="px-3 py-1.5 rounded border border-[#DFE3E8] dark:border-[#2A3444] bg-white dark:bg-[#161C26] text-[#172B4D] dark:text-[#E6EDF5] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] font-medium transition-colors"
           >
-            Executive View <ArrowUpRight size={13} />
+            Executive Summary
+          </Link>
+          <Link
+            to="/reports"
+            className="px-3 py-1.5 rounded bg-[#0052CC] hover:bg-[#0043A8] text-white font-medium transition-colors"
+          >
+            Reports
           </Link>
         </div>
       </div>
 
-      {/* Primary KPI Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricTile
-          label="Open Tickets"
-          value={openTickets}
-          subtext={
-            criticalTickets > 0
-              ? `${criticalTickets} critical priority`
-              : "No critical alerts"
-          }
-          tone={criticalTickets > 0 ? "red" : openTickets > 0 ? "amber" : "emerald"}
-          alert={criticalTickets > 0}
+      {/* Unified Enterprise Summary Bar (Meraki / Intune style) */}
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
+        <Link
           to="/repairs"
-        />
-        <MetricTile
-          label="Operational Tasks"
-          value={pendingTasks}
-          subtext={
-            overdueTasks > 0 ? `${overdueTasks} overdue` : "All on schedule"
-          }
-          tone={overdueTasks > 0 ? "red" : "blue"}
-          alert={overdueTasks > 0}
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            Open tickets
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {openTickets.length}
+          </div>
+          <div
+            className={`text-[12px] mt-0.5 ${
+              criticalTickets.length > 0
+                ? "text-[#DE350B] font-medium"
+                : "text-[#6B778C]"
+            }`}
+          >
+            {criticalTickets.length > 0
+              ? `${criticalTickets.length} critical`
+              : "No critical alerts"}
+          </div>
+        </Link>
+
+        <Link
           to="/tasks"
-        />
-        <MetricTile
-          label="Procurement Queue"
-          value={pendingRequests}
-          subtext="Pending approval / deploy"
-          tone={pendingRequests > 0 ? "purple" : "slate"}
-          to="/requests"
-        />
-        <MetricTile
-          label="Managed Fleet"
-          value={stats.totalAssets}
-          subtext={`AED ${stats.totalValue.toLocaleString()}`}
-          tone="emerald"
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            Open tasks
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {openTasks.length}
+          </div>
+          <div
+            className={`text-[12px] mt-0.5 ${
+              overdueTaskCount > 0
+                ? "text-[#DE350B] font-medium"
+                : "text-[#6B778C]"
+            }`}
+          >
+            {overdueTaskCount > 0
+              ? `${overdueTaskCount} overdue`
+              : "All on schedule"}
+          </div>
+        </Link>
+
+        <Link
+          to="/planner"
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            Active projects
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {activeProjects.length}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5">
+            {pendingRequests} procurement pending
+          </div>
+        </Link>
+
+        <Link
           to="/assets"
-        />
-      </div>
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            Managed assets
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {stats.totalAssets}
+          </div>
+          <div className="text-[12px] text-[#00875A] dark:text-[#36B37E] mt-0.5">
+            {activePct}% active deployed
+          </div>
+        </Link>
 
-      {/* Secondary Fleet Telemetry Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <MetricTile
-          label="Active Deployed"
-          value={stats.activeAssets}
-          subtext={`${utilizationPct}% fleet utilization`}
-          tone="emerald"
-        />
-        <MetricTile
-          label="In Storage"
-          value={storageAssets}
-          subtext="Available spares"
-          tone="slate"
-        />
-        <MetricTile
-          label="Under Repair"
-          value={stats.repairAssets}
-          subtext="Vendor / bench queue"
-          tone={stats.repairAssets > 0 ? "amber" : "slate"}
-        />
-        <MetricTile
-          label="Warranty Alerts"
-          value={(stats.expiringWarranties || 0) + (stats.expiredWarranties || 0)}
-          subtext={`${stats.expiringWarranties || 0} expiring • ${
-            stats.expiredWarranties || 0
-          } expired`}
-          tone={
-            (stats.expiredWarranties || 0) > 0
-              ? "red"
-              : (stats.expiringWarranties || 0) > 0
-              ? "amber"
-              : "emerald"
-          }
+        <Link
           to="/reports"
-        />
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors col-span-2 md:col-span-1"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            Fleet valuation
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            AED {stats.totalValue.toLocaleString()}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5">
+            {stats.repairAssets} under repair
+          </div>
+        </Link>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <OpsPanel title="Fleet Status" subtitle="Distribution by lifecycle state">
-          <div className="h-56 w-full">
-            {statusData.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-[#8C95A6]">
-                No assets registered yet
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={52}
-                    outerRadius={74}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, idx) => (
-                      <Cell key={idx} fill={entry.color} strokeWidth={0} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: "#F1F3F7" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          <div className="flex flex-wrap justify-center gap-4 pt-2 border-t border-[#E4E6EB] dark:border-[#222733] text-xs">
-            {statusData.map((s) => (
-              <div key={s.name} className="flex items-center gap-1.5">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: s.color }}
-                />
-                <span className="text-[#5A6270] dark:text-[#8B94A5]">{s.name}</span>
-                <span className="font-mono font-semibold tabular-nums text-[#111318] dark:text-[#F1F3F7]">
-                  {s.value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </OpsPanel>
-
-        <OpsPanel title="Capital by Venue" subtitle="Top locations (AED)">
-          <div className="h-64 w-full">
-            {valueByLocation.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-xs text-[#8C95A6]">
-                No location valuation data
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={valueByLocation}
-                  layout="vertical"
-                  margin={{ top: 4, right: 16, left: 10, bottom: 4 }}
+      {/* Main Split Workspace: Live Operational Table (2/3) + Fleet & Venue Ledger (1/3) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left: Live Operational Queues */}
+        <div className="lg:col-span-8 bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+          <div className="px-4 border-b border-[#DFE3E8] dark:border-[#242E40] flex items-center justify-between gap-2 bg-[#F9FAFB] dark:bg-[#1B2230]">
+            <div className="flex items-center gap-5 text-[13px] overflow-x-auto">
+              {[
+                { id: "tasks", label: `Active tasks (${openTasks.length})` },
+                { id: "tickets", label: `Open tickets (${openTickets.length})` },
+                {
+                  id: "projects",
+                  label: `Active projects (${activeProjects.length})`,
+                },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setQueueTab(t.id as any)}
+                  className={`py-3 border-b-2 font-medium whitespace-nowrap transition-colors ${
+                    queueTab === t.id
+                      ? "border-[#0052CC] text-[#0052CC] dark:text-[#4C9AFF] dark:border-[#4C9AFF]"
+                      : "border-transparent text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D] dark:hover:text-white"
+                  }`}
                 >
-                  <CartesianGrid
-                    strokeDasharray="2 2"
-                    horizontal={false}
-                    stroke="#334155"
-                    opacity={0.15}
-                  />
-                  <XAxis type="number" hide />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={90}
-                    tick={{ fontSize: 11, fill: "#8B94A5" }}
-                    interval={0}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "rgba(59,130,246,0.06)" }}
-                    contentStyle={tooltipStyle}
-                    itemStyle={{ color: "#F1F3F7" }}
-                    formatter={(value: number) => `AED ${value.toLocaleString()}`}
-                  />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 3, 3, 0]} barSize={14} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </OpsPanel>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        <OpsPanel title="Spend by Category" subtitle="Top hardware groups (AED)">
-          <div className="space-y-2.5 pt-1">
-            {categoryData.length === 0 ? (
-              <div className="h-56 flex items-center justify-center text-xs text-[#8C95A6]">
-                No category data yet
-              </div>
-            ) : (
-              categoryData.map((c) => {
-                const maxVal = categoryData[0]?.value || 1;
-                const widthPct = Math.max(4, Math.round((c.value / maxVal) * 100));
-                return (
-                  <div key={c.name} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="text-[#111318] dark:text-[#F1F3F7] font-medium truncate">
-                        {c.name}
-                      </span>
-                      <span className="font-mono text-[11px] text-[#5A6270] dark:text-[#8B94A5] tabular-nums shrink-0">
-                        AED {c.value.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#F4F5F7] dark:bg-[#181C25] rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-[#111318] dark:bg-blue-500 rounded-full"
-                        style={{ width: `${widthPct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })
+            <Link
+              to={
+                queueTab === "tasks"
+                  ? "/tasks"
+                  : queueTab === "tickets"
+                  ? "/repairs"
+                  : "/planner"
+              }
+              className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline shrink-0"
+            >
+              Open full view
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            {queueTab === "tasks" && (
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C] bg-[#FAFBFC] dark:bg-[#181F2B]">
+                    <th className="px-4 py-2.5">Task</th>
+                    <th className="px-4 py-2.5">Venue</th>
+                    <th className="px-4 py-2.5">Owner</th>
+                    <th className="px-4 py-2.5">Priority</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    <th className="px-4 py-2.5 text-right">Due</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                  {openTasks.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-[#6B778C]"
+                      >
+                        No active operational tasks.
+                      </td>
+                    </tr>
+                  ) : (
+                    openTasks.slice(0, 10).map((t) => (
+                      <tr
+                        key={t.id}
+                        className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors"
+                      >
+                        <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                          {t.title}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.venue || "—"}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#172B4D] dark:text-[#CBD5E1]">
+                          {t.assignedTo || "Unassigned"}
+                        </td>
+                        <td className={`px-4 py-2.5 ${priorityColor(t.priority)}`}>
+                          {t.priority}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.status}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.dueDate || "—"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {queueTab === "tickets" && (
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C] bg-[#FAFBFC] dark:bg-[#181F2B]">
+                    <th className="px-4 py-2.5">Ticket</th>
+                    <th className="px-4 py-2.5">Asset / Issue</th>
+                    <th className="px-4 py-2.5">Venue</th>
+                    <th className="px-4 py-2.5">Priority</th>
+                    <th className="px-4 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                  {openTickets.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-[#6B778C]"
+                      >
+                        No open help desk tickets.
+                      </td>
+                    </tr>
+                  ) : (
+                    openTickets.slice(0, 10).map((t) => (
+                      <tr
+                        key={t.id}
+                        className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors"
+                      >
+                        <td className="px-4 py-2.5 font-mono text-xs text-[#0052CC] dark:text-[#4C9AFF]">
+                          {t.ticketNumber}
+                        </td>
+                        <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                          {t.assetName}
+                          <div className="text-xs font-normal text-[#6B778C] truncate max-w-xs">
+                            {t.description}
+                          </div>
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.location}
+                        </td>
+                        <td className={`px-4 py-2.5 ${priorityColor(t.priority)}`}>
+                          {t.priority}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.status}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {queueTab === "projects" && (
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C] bg-[#FAFBFC] dark:bg-[#181F2B]">
+                    <th className="px-4 py-2.5">Project</th>
+                    <th className="px-4 py-2.5">Venue</th>
+                    <th className="px-4 py-2.5">Progress</th>
+                    <th className="px-4 py-2.5">Status</th>
+                    <th className="px-4 py-2.5 text-right">Target</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                  {activeProjects.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-4 py-10 text-center text-[#6B778C]"
+                      >
+                        No active IT projects.
+                      </td>
+                    </tr>
+                  ) : (
+                    activeProjects.map((p) => {
+                      const pct = computeProjectProgress(p);
+                      return (
+                        <tr
+                          key={p.id}
+                          className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors"
+                        >
+                          <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5]">
+                            {p.name}
+                          </td>
+                          <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                            {p.venue || "Multi-Venue"}
+                          </td>
+                          <td className="px-4 py-2.5 w-36">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-[#EBECF0] dark:bg-[#242E40] rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-[#0052CC] rounded-full"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                              <span className="font-mono text-xs tabular-nums text-[#5E6C84]">
+                                {pct}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                            {p.status}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-[#5E6C84]">
+                            {p.targetDate || "—"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             )}
           </div>
-        </OpsPanel>
+        </div>
+
+        {/* Right: Fleet Health + Venue Valuation + Warranty Rail */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* Fleet Health Segmented Bar */}
+          <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                Fleet health
+              </h2>
+              <span className="text-xs text-[#6B778C] tabular-nums">
+                {stats.totalAssets} total
+              </span>
+            </div>
+
+            <div className="h-2 w-full rounded-sm overflow-hidden flex bg-[#EBECF0] dark:bg-[#242E40]">
+              {stats.totalAssets > 0 && (
+                <>
+                  <div
+                    className="bg-[#00875A] h-full"
+                    style={{ width: `${activePct}%` }}
+                  />
+                  <div
+                    className="bg-[#6B778C] h-full"
+                    style={{ width: `${storagePct}%` }}
+                  />
+                  <div
+                    className="bg-[#FF991F] h-full"
+                    style={{ width: `${repairPct}%` }}
+                  />
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1 text-xs">
+              <div>
+                <div className="text-[#6B778C]">Active</div>
+                <div className="font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-0.5">
+                  {stats.activeAssets}
+                </div>
+              </div>
+              <div>
+                <div className="text-[#6B778C]">In storage</div>
+                <div className="font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-0.5">
+                  {storageAssets}
+                </div>
+              </div>
+              <div>
+                <div className="text-[#6B778C]">Under repair</div>
+                <div className="font-semibold text-[#D97706] tabular-nums mt-0.5">
+                  {stats.repairAssets}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Venue Asset Ledger */}
+          <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+              <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                Asset value by venue
+              </h2>
+              <Link
+                to="/venues"
+                className="text-xs text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
+              >
+                Venues
+              </Link>
+            </div>
+            <table className="w-full text-left text-[12px]">
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {venueLedger.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-[#6B778C]">
+                      No venue data yet.
+                    </td>
+                  </tr>
+                ) : (
+                  venueLedger.map((v) => (
+                    <tr key={v.name}>
+                      <td className="px-4 py-2 font-medium text-[#172B4D] dark:text-[#E6EDF5] truncate max-w-[160px]">
+                        {v.name}
+                      </td>
+                      <td className="px-2 py-2 text-right text-[#6B778C] tabular-nums">
+                        {v.count}
+                      </td>
+                      <td className="px-4 py-2 text-right font-mono tabular-nums text-[#172B4D] dark:text-[#CBD5E1]">
+                        AED {v.value.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Upcoming Warranties */}
+          <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
+              <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                Warranty expirations
+              </h2>
+              <Link
+                to="/reports"
+                className="text-xs text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
+              >
+                Forecast
+              </Link>
+            </div>
+            <div className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+              {warrantyAlerts.length === 0 ? (
+                <div className="px-4 py-5 text-xs text-[#6B778C]">
+                  No warranties expiring within 60 days.
+                </div>
+              ) : (
+                warrantyAlerts.map((a) => {
+                  const expired = getWarrantyStatus(a.warrantyExpiry) === "expired";
+                  return (
+                    <div
+                      key={a.id}
+                      className="px-4 py-2.5 flex items-center justify-between gap-2 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium text-[#172B4D] dark:text-[#E6EDF5] truncate">
+                          {a.name}
+                        </div>
+                        <div className="text-[#6B778C] truncate">{a.location}</div>
+                      </div>
+                      <span
+                        className={`font-mono shrink-0 ${
+                          expired
+                            ? "text-[#DE350B] font-semibold"
+                            : "text-[#D97706] font-medium"
+                        }`}
+                      >
+                        {expired ? "Expired" : a.warrantyExpiry}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
