@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Loader2, PlusCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
+import ExecutiveDashboard from './components/ExecutiveDashboard';
 import AssetList from './components/AssetList';
 import AssetForm from './components/AssetForm';
 import Planner from './components/Planner';
@@ -21,7 +22,7 @@ import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import LoginScreen from './components/LoginScreen';
 import { Asset, UserRole } from './types';
-import { saveAsset, deleteAsset, getStats, logoutUser, getCurrentUserProfile, canManageOperations } from './services/storageService';
+import { saveAsset, deleteAsset, getStats, logoutUser, getCurrentUserProfile, canManageOperations, isReadOnlyRole } from './services/storageService';
 import { AppDataProvider, useAppData } from './context/AppDataContext';
 
 const ProtectedRoute = ({ children, requiredRole }: { children?: React.ReactNode, requiredRole?: UserRole }) => {
@@ -105,7 +106,8 @@ const AppShell = () => {
                         <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar">
                             <div className="max-w-7xl mx-auto pb-10">
                                 <Routes>
-                                    <Route path="/" element={<Dashboard stats={getStats(assets)} allAssets={assets} />} />
+                                    <Route path="/" element={isReadOnlyRole(user) ? <ExecutiveDashboard /> : <Dashboard stats={getStats(assets)} allAssets={assets} />} />
+                                    <Route path="/executive" element={<ExecutiveDashboard />} />
                                     <Route path="/assets" element={<AssetRegistryWrapper assets={assets} view={view} setView={setView} editingAsset={editingAsset} setEditingAsset={setEditingAsset} handleSaveAsset={handleSaveAsset} handleDuplicate={handleDuplicate} handleDeleteAsset={handleDeleteAsset} loading={loading} canEdit={canEdit} />} />
                                     <Route path="/requests" element={<AssetRequests />} />
                                     <Route path="/repairs" element={<RepairTickets />} />

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MonitorSmartphone, Database, Shield, LayoutDashboard, List, ShoppingBag, Wrench, Receipt, CalendarCheck, Users, Settings as SettingsIcon, X, ClipboardList, LifeBuoy, Box, Building2 } from 'lucide-react';
+import { MonitorSmartphone, Database, Shield, LayoutDashboard, List, ShoppingBag, Wrench, Receipt, CalendarCheck, Users, Settings as SettingsIcon, X, ClipboardList, LifeBuoy, Box, Building2, Presentation } from 'lucide-react';
 import { getSandboxStatus, getCurrentUserProfile } from '../services/storageService';
 
 interface SidebarProps {
@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ notificationCount, isOpen, onClose })
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-2 mt-2">Core Modules</div>
           
           <Link to="/" className={linkClass('/')} onClick={onClose}><LayoutDashboard size={18} /> Dashboard</Link>
+          <Link to="/executive" className={linkClass('/executive')} onClick={onClose}><Presentation size={18} /> Executive View</Link>
           <Link to="/repairs" className={linkClass('/repairs')} onClick={onClose}><LifeBuoy size={18} /> Help Desk</Link>
           <Link to="/assets" className={linkClass('/assets')} onClick={onClose}><Box size={18} /> Inventory Registry</Link>
           <Link to="/venues" className={linkClass('/venues')} onClick={onClose}><Building2 size={18} /> Venues & Infra</Link>
