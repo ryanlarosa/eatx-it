@@ -16,6 +16,7 @@ import PublicAssetRequest from './components/PublicAssetRequest';
 import PublicStatusTracker from './components/PublicStatusTracker';
 import Invoices from './components/Invoices';
 import Tasks from './components/Tasks';
+import Venues from './components/Venues';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import LoginScreen from './components/LoginScreen';
@@ -111,6 +112,7 @@ const AppShell = () => {
                                     <Route path="/invoices" element={<Invoices />} />
                                     <Route path="/planner" element={<Planner />} />
                                     <Route path="/tasks" element={<Tasks />} />
+                                    <Route path="/venues" element={<Venues />} />
                                     <Route path="/staff" element={<ProtectedRoute requiredRole="technician"><StaffView /></ProtectedRoute>} />
                                     <Route path="/settings" element={<ProtectedRoute requiredRole="technician"><Settings /></ProtectedRoute>} />
                                     <Route path="*" element={<Navigate to="/" replace />} />

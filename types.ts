@@ -289,3 +289,49 @@ export interface EmployeeITProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+// --- PHASE 5: VENUE INFRASTRUCTURE MANAGEMENT ---
+
+export type VenueStatus = 'Operational' | 'Opening Soon' | 'Under Maintenance' | 'Closed';
+
+export interface VenueISP {
+  id: string;
+  provider: string; // e.g. Etisalat, du
+  accountNumber?: string;
+  circuitId?: string;
+  staticIp?: string;
+  bandwidth?: string;
+  supportPhone?: string;
+  isBackup?: boolean;
+  notes?: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  code?: string;
+  brand?: string;
+  address?: string;
+  managerName?: string;
+  managerContact?: string;
+  status: VenueStatus;
+  ispDetails: VenueISP[];
+  networkNotes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type VisitPurpose = 'Routine Check' | 'Incident Response' | 'Installation' | 'Preventive Maintenance' | 'Audit';
+
+export interface VenueVisit {
+  id: string;
+  venueId: string;
+  venueName: string;
+  visitDate: string;
+  technician: string; // Ryan / Diego
+  purpose: VisitPurpose;
+  findings: string;
+  actionsTaken?: string;
+  followUpRequired: boolean;
+  createdAt: string;
+}

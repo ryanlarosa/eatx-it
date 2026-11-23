@@ -14,6 +14,7 @@ export * from "./documentService";
 export * from "./fileStorageService";
 export * from "./employeeService";
 export * from "./vendorService";
+export * from "./venueService";
 export * from "../types";
 
 import { db, getColName, snapToData, commitChunkedBatch, handleFirestoreError, OperationType } from "./firebase";
