@@ -13,12 +13,13 @@ import {
   ClipboardCheck, RotateCcw, UserPlus, UserMinus, HardDrive, ListFilter
 } from 'lucide-react';
 import HandoverModal from './HandoverModal';
+import EmployeeProfiles from './EmployeeProfiles';
 
 const StaffView: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [pendingLinks, setPendingLinks] = useState<PendingHandover[]>([]);
   const [mode, setMode] = useState<'onboard' | 'offboard'>('offboard');
-  const [view, setView] = useState<'manage' | 'documents' | 'pending'>('manage');
+  const [view, setView] = useState<'profiles' | 'manage' | 'documents' | 'pending'>('profiles');
   
   // Manage View Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -418,12 +419,15 @@ const StaffView: React.FC = () => {
     <div className="space-y-6 relative h-full">
       <header className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Staff & Audit</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Digital handovers, offboarding, and asset verification.</p>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Employees & Handovers</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Employee IT profiles, onboarding/offboarding checklists, and digital handovers.</p>
         </div>
-        <div className="flex bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl self-start border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="flex flex-wrap bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl self-start border border-slate-200 dark:border-slate-700 shadow-sm">
+            <button onClick={() => setView('profiles')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'profiles' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+                <UserIcon size={16} /> IT Profiles
+            </button>
             <button onClick={() => setView('manage')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'manage' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                <RotateCcw size={16} /> Workflow
+                <RotateCcw size={16} /> Handover Workflow
             </button>
             <button onClick={() => setView('pending')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'pending' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
                 <LinkIcon size={16} /> Pending Links
@@ -440,7 +444,17 @@ const StaffView: React.FC = () => {
         </div>
       )}
 
-      {view === 'manage' ? (
+      {view === 'profiles' ? (
+        <EmployeeProfiles
+          assets={assets}
+          onStartHandover={(empName, targetMode) => {
+            setMode(targetMode);
+            setSelectedEmployee(empName);
+            setSelectedAssetIds(new Set());
+            setView('manage');
+          }}
+        />
+      ) : view === 'manage' ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
             {/* Step-by-Step Command Sidebar */}
             <div className="lg:col-span-1 space-y-4 sticky top-24">

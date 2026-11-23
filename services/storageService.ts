@@ -12,6 +12,7 @@ export * from "./workflowService";
 export * from "./operationService";
 export * from "./documentService";
 export * from "./fileStorageService";
+export * from "./employeeService";
 export * from "../types";
 
 import { db, getColName, snapToData, commitChunkedBatch, handleFirestoreError, OperationType } from "./firebase";

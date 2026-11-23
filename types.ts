@@ -197,3 +197,37 @@ export interface PublicStatusResult {
   updated?: string;
   notes?: string;
 }
+
+// --- PHASE 2: EMPLOYEE IT PROFILES (Lightweight IT-only, non-Bayzat) ---
+
+export type EmployeeITStatus = 'Active' | 'Onboarding' | 'Offboarding' | 'Offboarded';
+
+export interface ITChecklistItem {
+  id: string;
+  label: string;
+  done: boolean;
+  completedBy?: string;
+  completedAt?: string;
+}
+
+export interface EmployeeITProfile {
+  id: string;
+  name: string;
+  email?: string;
+  jobTitle?: string;
+  department?: string;
+  location?: string; // Venue / Office name
+  venueId?: string;
+  status: EmployeeITStatus;
+  startDate?: string;
+  lastWorkingDay?: string;
+  assetReturnConfirmed?: boolean;
+  assetReturnConfirmedAt?: string;
+  assetReturnConfirmedBy?: string;
+  notes?: string;
+  onboardingChecklist: ITChecklistItem[];
+  accessChecklist: ITChecklistItem[];
+  offboardingChecklist: ITChecklistItem[];
+  createdAt: string;
+  updatedAt: string;
+}
