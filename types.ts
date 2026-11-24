@@ -142,6 +142,8 @@ export interface Asset {
   purchaseCost?: number;
   disposalDate?: string; // ISO date YYYY-MM-DD
   disposalReason?: string;
+  lastAuditedAt?: string; // ISO timestamp for year-end physical inventory verification
+  lastAuditedBy?: string;
   lastUpdated: string;
 }
 

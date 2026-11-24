@@ -469,14 +469,43 @@ const ExecutiveDashboard: React.FC = () => {
 
         <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-hidden">
           <div className="px-4 py-3 border-b border-[#EBECF0] dark:border-[#242E40] flex items-center justify-between bg-[#F9FAFB] dark:bg-[#1B2230]">
-            <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
-              Recent venue site visits
-            </h2>
+            <div>
+              <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                Recent venue site visits
+              </h2>
+              <div className="text-[11px] text-[#6B778C]">
+                This month:{" "}
+                <strong className="text-[#172B4D] dark:text-[#E6EDF5]">
+                  {
+                    visits.filter((v) =>
+                      v.visitDate?.startsWith(new Date().toISOString().slice(0, 7))
+                    ).length
+                  }
+                </strong>{" "}
+                visits (Ryan:{" "}
+                {
+                  visits.filter(
+                    (v) =>
+                      v.visitDate?.startsWith(new Date().toISOString().slice(0, 7)) &&
+                      v.technician === "Ryan"
+                  ).length
+                }
+                , Diego:{" "}
+                {
+                  visits.filter(
+                    (v) =>
+                      v.visitDate?.startsWith(new Date().toISOString().slice(0, 7)) &&
+                      v.technician === "Diego"
+                  ).length
+                }
+                )
+              </div>
+            </div>
             <Link
-              to="/venues"
+              to="/venues?logVisit=1"
               className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
             >
-              Venues
+              Visit log
             </Link>
           </div>
           {visits.length === 0 ? (

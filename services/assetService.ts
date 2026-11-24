@@ -71,6 +71,35 @@ export const deleteAsset = async (id: string) => {
   }
 };
 
+export const markAssetVerified = async (assetId: string, assetName?: string) => {
+  const path = getColName("assets");
+  const now = new Date().toISOString();
+  const performer =
+    getCurrentUserProfile()?.displayName ||
+    getCurrentUserProfile()?.email ||
+    "IT";
+  try {
+    await setDoc(
+      doc(db, path, assetId),
+      { lastAuditedAt: now, lastAuditedBy: performer, lastUpdated: now },
+      { merge: true }
+    );
+    try {
+      await addDoc(collection(db, getColName("logs")), {
+        assetId,
+        action: "Audit",
+        details: `Physical inventory verified${assetName ? ` (${assetName})` : ""}.`,
+        performedBy: performer,
+        timestamp: now,
+      });
+    } catch {
+      // Silent failure for audit log
+    }
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
 export const importAssetsBulk = async (assets: Asset[]) => {
   const path = getColName("assets");
   try {

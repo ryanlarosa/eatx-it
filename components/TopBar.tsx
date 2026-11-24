@@ -168,7 +168,7 @@ const QuickActionsMenu = () => {
     { label: "Register Asset", to: "/assets?new=1", icon: Box },
     { label: "New Ticket / Task", to: "/tickets", icon: ClipboardList },
     { label: "New IT Project", to: "/planner", icon: FolderKanban },
-    { label: "Log Venue Site Visit", to: "/venues", icon: Building2 },
+    { label: "Log Venue Site Visit", to: "/venues?logVisit=1", icon: Building2 },
   ];
 
   return (

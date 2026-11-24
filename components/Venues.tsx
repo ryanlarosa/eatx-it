@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Asset,
   IncidentReport,
@@ -101,8 +102,16 @@ const Venues: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [pageTab, setPageTab] = useState<"directory" | "visits">("directory");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | VenueStatus>("All");
+  const [visitVenueFilter, setVisitVenueFilter] = useState("All");
+  const [visitTechFilter, setVisitTechFilter] = useState("All");
+  const [visitMonthFilter, setVisitMonthFilter] = useState("");
+  const [visitFollowUpOnly, setVisitFollowUpOnly] = useState(false);
+  const [showQuickVisitModal, setShowQuickVisitModal] = useState(false);
+  const [quickVisitVenueName, setQuickVisitVenueName] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
@@ -351,6 +360,66 @@ const Venues: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    if (searchParams.get("logVisit") === "1") {
+      setPageTab("visits");
+      if (canEdit) setShowQuickVisitModal(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, canEdit, setSearchParams]);
+
+  const allVenueNames = useMemo(() => {
+    const set = new Set<string>();
+    venues.forEach((v) => set.add(v.name));
+    locations.forEach((l) => set.add(l));
+    return Array.from(set).sort();
+  }, [venues, locations]);
+
+  const filteredVisits = useMemo(() => {
+    return visits.filter((vis) => {
+      if (visitVenueFilter !== "All" && vis.venueName !== visitVenueFilter)
+        return false;
+      if (visitTechFilter !== "All" && vis.technician !== visitTechFilter)
+        return false;
+      if (visitMonthFilter && !vis.visitDate?.startsWith(visitMonthFilter))
+        return false;
+      if (visitFollowUpOnly && !vis.followUpRequired) return false;
+      return true;
+    });
+  }, [visits, visitVenueFilter, visitTechFilter, visitMonthFilter, visitFollowUpOnly]);
+
+  const handleQuickLogVisit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canEdit || !quickVisitVenueName || !visitDraft.findings?.trim()) return;
+    const matchedVenue = venues.find(
+      (v) => v.name.toLowerCase() === quickVisitVenueName.toLowerCase()
+    );
+    await saveVenueVisit({
+      id: "",
+      venueId: matchedVenue?.id || quickVisitVenueName,
+      venueName: quickVisitVenueName,
+      visitDate: visitDraft.visitDate || new Date().toISOString().split("T")[0],
+      technician: visitDraft.technician || "Diego",
+      purpose: (visitDraft.purpose as VisitPurpose) || "Routine Check",
+      findings: visitDraft.findings.trim(),
+      actionsTaken: visitDraft.actionsTaken?.trim() || "",
+      followUpRequired: !!visitDraft.followUpRequired,
+      createdAt: new Date().toISOString(),
+    });
+    setVisitDraft({
+      visitDate: new Date().toISOString().split("T")[0],
+      technician: "Diego",
+      purpose: "Routine Check",
+      findings: "",
+      actionsTaken: "",
+      followUpRequired: false,
+    });
+    setQuickVisitVenueName("");
+    setShowQuickVisitModal(false);
+    setPageTab("visits");
+    flash(`Site visit logged for ${quickVisitVenueName}.`);
+  };
+
   return (
     <div className="space-y-6">
       {banner && (
@@ -374,23 +443,53 @@ const Venues: React.FC = () => {
         </div>
 
         {canEdit && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowQuickVisitModal(true)}
+              className="px-3.5 py-2 text-[13px] font-medium rounded bg-[#0052CC] hover:bg-[#0043A8] text-white flex items-center gap-1.5 transition-colors"
+            >
+              <ClipboardCheck size={15} /> Log Site Visit
+            </button>
             <button
               onClick={handleSyncLocations}
               disabled={syncing}
-              className="px-3 py-2 text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2"
+              className="px-3 py-2 text-[13px] font-medium rounded border border-[#DFE3E8] dark:border-[#2A3444] bg-white dark:bg-[#161C26] text-[#172B4D] dark:text-[#E6EDF5] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] flex items-center gap-1.5"
             >
-              <RefreshCw size={15} className={syncing ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
               <span className="hidden sm:inline">Sync Locations</span>
             </button>
             <button
               onClick={openCreateVenue}
-              className="px-3.5 py-2 text-[13px] font-medium rounded bg-[#0052CC] hover:bg-[#0043A8] text-white flex items-center gap-1.5 transition-colors"
+              className="px-3 py-2 text-[13px] font-medium rounded border border-[#DFE3E8] dark:border-[#2A3444] bg-white dark:bg-[#161C26] text-[#172B4D] dark:text-[#E6EDF5] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] flex items-center gap-1.5 transition-colors"
             >
               <Plus size={15} /> Add Venue
             </button>
           </div>
         )}
+      </div>
+
+      {/* Top-Level Page Tabs: Venues Directory vs. Site Visit Log */}
+      <div className="border-b border-[#DFE3E8] dark:border-[#242E40] flex items-center gap-6 text-[13px]">
+        <button
+          onClick={() => setPageTab("directory")}
+          className={`pb-2.5 border-b-2 font-medium transition-colors ${
+            pageTab === "directory"
+              ? "border-[#0052CC] text-[#0052CC] dark:text-[#4C9AFF] dark:border-[#4C9AFF]"
+              : "border-transparent text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D] dark:hover:text-white"
+          }`}
+        >
+          Venues Directory ({venues.length})
+        </button>
+        <button
+          onClick={() => setPageTab("visits")}
+          className={`pb-2.5 border-b-2 font-medium transition-colors ${
+            pageTab === "visits"
+              ? "border-[#0052CC] text-[#0052CC] dark:text-[#4C9AFF] dark:border-[#4C9AFF]"
+              : "border-transparent text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D] dark:hover:text-white"
+          }`}
+        >
+          Site Visit Log ({visits.length})
+        </button>
       </div>
 
       {/* KPI Strip */}
@@ -429,6 +528,132 @@ const Venues: React.FC = () => {
         </div>
       </div>
 
+      {pageTab === "visits" ? (
+        <div className="space-y-4">
+          {/* Visit Log Filters */}
+          <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded p-3 flex flex-wrap gap-2.5 items-center">
+            <select
+              value={visitVenueFilter}
+              onChange={(e) => setVisitVenueFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+            >
+              <option value="All">All venues</option>
+              {allVenueNames.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+            <select
+              value={visitTechFilter}
+              onChange={(e) => setVisitTechFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+            >
+              <option value="All">All technicians</option>
+              {IT_STAFF.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <input
+              type="month"
+              value={visitMonthFilter}
+              onChange={(e) => setVisitMonthFilter(e.target.value)}
+              className="px-2.5 py-1.5 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+            />
+            <label className="flex items-center gap-1.5 text-xs font-medium text-[#42526E] dark:text-[#CBD5E1] cursor-pointer px-1">
+              <input
+                type="checkbox"
+                checked={visitFollowUpOnly}
+                onChange={(e) => setVisitFollowUpOnly(e.target.checked)}
+              />
+              Follow-up required only
+            </label>
+          </div>
+
+          {/* All-Venues Site Visits Table */}
+          <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded overflow-x-auto">
+            <table className="w-full text-left border-collapse text-[13px]">
+              <thead>
+                <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C] bg-[#F9FAFB] dark:bg-[#1B2230]">
+                  <th className="px-4 py-2.5">Date</th>
+                  <th className="px-4 py-2.5">Venue</th>
+                  <th className="px-4 py-2.5">Technician</th>
+                  <th className="px-4 py-2.5">Purpose</th>
+                  <th className="px-4 py-2.5">Findings &amp; Actions</th>
+                  <th className="px-4 py-2.5">Follow-Up</th>
+                  {isAdmin && <th className="px-4 py-2.5 text-right">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                {filteredVisits.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={isAdmin ? 7 : 6}
+                      className="px-4 py-10 text-center text-[#6B778C]"
+                    >
+                      No venue site visits logged yet. Click{" "}
+                      <strong>Log Site Visit</strong> to record a visit.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredVisits.map((vis) => (
+                    <tr
+                      key={vis.id}
+                      className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534]"
+                    >
+                      <td className="px-4 py-2.5 font-mono text-xs whitespace-nowrap">
+                        {vis.visitDate}
+                      </td>
+                      <td className="px-4 py-2.5 font-medium text-[#172B4D] dark:text-[#E6EDF5] whitespace-nowrap">
+                        {vis.venueName}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {vis.technician}
+                      </td>
+                      <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8] whitespace-nowrap">
+                        {vis.purpose}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="text-[#172B4D] dark:text-[#E6EDF5]">
+                          {vis.findings}
+                        </div>
+                        {vis.actionsTaken && (
+                          <div className="text-xs text-[#6B778C] mt-0.5">
+                            Actions: {vis.actionsTaken}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {vis.followUpRequired ? (
+                          <span className="text-xs font-semibold text-[#D97706]">
+                            Required
+                          </span>
+                        ) : (
+                          <span className="text-xs text-[#6B778C]">None</span>
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-2.5 text-right">
+                          <button
+                            onClick={() => deleteVenueVisit(vis.id)}
+                            className="text-[#8A99B0] hover:text-[#DE350B] p-1"
+                            title="Delete visit"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Filter Bar */}
       <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -553,6 +778,156 @@ const Venues: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Quick Log Site Visit Modal */}
+      {showQuickVisitModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] max-w-lg w-full shadow-xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230] flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                Log Venue Site Visit
+              </h3>
+              <button onClick={() => setShowQuickVisitModal(false)}>
+                <X size={18} className="text-[#6B778C]" />
+              </button>
+            </div>
+            <form onSubmit={handleQuickLogVisit} className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                  Venue / Outlet *
+                </label>
+                <select
+                  required
+                  value={quickVisitVenueName}
+                  onChange={(e) => setQuickVisitVenueName(e.target.value)}
+                  className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                >
+                  <option value="">Select venue...</option>
+                  {allVenueNames.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                    Visit Date *
+                  </label>
+                  <input
+                    required
+                    type="date"
+                    value={visitDraft.visitDate || ""}
+                    onChange={(e) =>
+                      setVisitDraft({ ...visitDraft, visitDate: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                    Technician
+                  </label>
+                  <select
+                    value={visitDraft.technician || "Diego"}
+                    onChange={(e) =>
+                      setVisitDraft({ ...visitDraft, technician: e.target.value })
+                    }
+                    className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                  >
+                    {IT_STAFF.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                    Purpose
+                  </label>
+                  <select
+                    value={visitDraft.purpose || "Routine Check"}
+                    onChange={(e) =>
+                      setVisitDraft({
+                        ...visitDraft,
+                        purpose: e.target.value as VisitPurpose,
+                      })
+                    }
+                    className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                  >
+                    {VISIT_PURPOSES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                  Findings / Observations *
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="What was inspected, repaired, or audited on site..."
+                  value={visitDraft.findings || ""}
+                  onChange={(e) =>
+                    setVisitDraft({ ...visitDraft, findings: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1">
+                  Actions Taken (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Replaced switch cable, verified POS & CCTV recording"
+                  value={visitDraft.actionsTaken || ""}
+                  onChange={(e) =>
+                    setVisitDraft({ ...visitDraft, actionsTaken: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-[13px] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C]"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-xs font-medium text-[#42526E] dark:text-[#CBD5E1]">
+                <input
+                  type="checkbox"
+                  checked={!!visitDraft.followUpRequired}
+                  onChange={(e) =>
+                    setVisitDraft({
+                      ...visitDraft,
+                      followUpRequired: e.target.checked,
+                    })
+                  }
+                />
+                Follow-up visit or procurement required
+              </label>
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#EBECF0] dark:border-[#242E40]">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickVisitModal(false)}
+                  className="px-4 py-2 text-[13px] text-[#5E6C84] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#0052CC] hover:bg-[#0043A8] text-white text-[13px] font-medium rounded flex items-center gap-1.5"
+                >
+                  <Save size={14} /> Save Visit
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

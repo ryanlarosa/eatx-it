@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Asset, ASSET_STATUSES, AssetStatus } from '../types';
 import { Edit2, Trash2, Search, MapPin, Tag, User, Upload, AlertTriangle, Lock, Building2, Columns, Check, RefreshCw, ChevronLeft, ChevronRight, FileSpreadsheet, FileOutput, QrCode, X, CheckCircle2, Copy, ChevronsLeft, ChevronsRight, ShoppingCart, Loader2 } from 'lucide-react';
-import { importAssetsBulk, getAppConfig, getCurrentUserProfile, getSandboxStatus } from '../services/storageService';
+import { importAssetsBulk, getAppConfig, getCurrentUserProfile, getSandboxStatus, markAssetVerified } from '../services/storageService';
 import ExcelJS from 'exceljs';
 import QRCode from 'react-qr-code';
 import ReactDOMServer from 'react-dom/server';
@@ -40,6 +40,11 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
   const [filterSerial, setFilterSerial] = useState(() => localStorage.getItem('eatx_filter_serial') || '');
   const [filterEmployee, setFilterEmployee] = useState(() => localStorage.getItem('eatx_filter_employee') || '');
   const [filterSupplier, setFilterSupplier] = useState(() => localStorage.getItem('eatx_filter_supplier') || '');
+  const [filterAudit, setFilterAudit] = useState<'All' | 'Verified' | 'Unverified'>('All');
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
+
+  const currentYear = new Date().getFullYear().toString();
+  const isVerifiedThisYear = (a: Asset) => Boolean(a.lastAuditedAt?.startsWith(currentYear));
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -94,19 +99,39 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
     setCurrentPage(1);
   }, [searchTerm, filterStatus, filterCategory, filterLocation, filterSerial, filterEmployee, filterSupplier]);
 
+  const auditStats = useMemo(() => {
+    const activeFleet = assets.filter(a => a.status !== 'Retired');
+    const verified = activeFleet.filter(isVerifiedThisYear).length;
+    const total = activeFleet.length;
+    const pct = total ? Math.round((verified / total) * 100) : 0;
+    return { verified, total, pct };
+  }, [assets]);
+
+  const handleVerifyAsset = async (asset: Asset) => {
+    if (!canEdit) return;
+    setVerifyingId(asset.id);
+    try {
+      await markAssetVerified(asset.id, asset.name);
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
         const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              asset.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                              asset.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                              (asset.assetTag || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = filterStatus === 'All' || asset.status === filterStatus;
         const matchesCategory = filterCategory === 'All' || asset.category === filterCategory;
         const matchesLocation = filterLocation === 'All' || asset.location === filterLocation;
         const matchesSerial = filterSerial === '' || (asset.serialNumber && asset.serialNumber.toLowerCase().includes(filterSerial.toLowerCase()));
         const matchesEmployee = filterEmployee === '' || (asset.assignedEmployee && asset.assignedEmployee.toLowerCase().includes(filterEmployee.toLowerCase()));
         const matchesSupplier = filterSupplier === '' || (asset.supplier && asset.supplier.toLowerCase().includes(filterSupplier.toLowerCase()));
-        return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesSerial && matchesEmployee && matchesSupplier;
+        const matchesAudit = filterAudit === 'All' || (filterAudit === 'Verified' ? isVerifiedThisYear(asset) : !isVerifiedThisYear(asset));
+        return matchesSearch && matchesStatus && matchesCategory && matchesLocation && matchesSerial && matchesEmployee && matchesSupplier && matchesAudit;
     });
-  }, [assets, searchTerm, filterStatus, filterCategory, filterLocation, filterSerial, filterEmployee, filterSupplier]);
+  }, [assets, searchTerm, filterStatus, filterCategory, filterLocation, filterSerial, filterEmployee, filterSupplier, filterAudit]);
 
   const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -226,7 +251,42 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
   const inputClass = "p-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-[#0b1120] text-slate-700 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none text-sm transition-all";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Year-End Physical Inventory Audit Bar */}
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Year-End Inventory Audit ({currentYear})
+            </span>
+            <span className="font-mono tabular-nums text-[#5E6C84] dark:text-[#94A3B8]">
+              {auditStats.verified} / {auditStats.total} verified ({auditStats.pct}%)
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-[#EBECF0] dark:bg-[#242E40] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#00875A] rounded-full transition-all"
+              style={{ width: `${auditStats.pct}%` }}
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {(['All', 'Verified', 'Unverified'] as const).map(opt => (
+            <button
+              key={opt}
+              onClick={() => { setFilterAudit(opt); setCurrentPage(1); }}
+              className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                filterAudit === opt
+                  ? 'bg-[#0052CC] text-white border-[#0052CC]'
+                  : 'bg-white dark:bg-[#0F141C] text-[#5E6C84] dark:text-[#94A3B8] border-[#DFE3E8] dark:border-[#2A3444] hover:bg-[#F4F5F7]'
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Search & Actions Bar */}
       <div className="flex flex-col md:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
@@ -362,10 +422,32 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
                     </td>
                   )}
                   <td className="p-4 pr-6 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => onEdit(asset)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><Edit2 size={14}/></button>
-                      <button onClick={() => onDuplicate(asset)} className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"><Copy size={14}/></button>
-                      <button onClick={() => onDelete(asset.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                    <div className="flex justify-end items-center gap-2">
+                      {isVerifiedThisYear(asset) ? (
+                        <span
+                          title={`Verified on ${new Date(asset.lastAuditedAt!).toLocaleDateString()} by ${asset.lastAuditedBy || 'IT'}`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-[#00875A] dark:bg-emerald-900/20 dark:text-[#36B37E]"
+                        >
+                          <CheckCircle2 size={12} /> Verified
+                        </span>
+                      ) : canEdit ? (
+                        <button
+                          onClick={() => handleVerifyAsset(asset)}
+                          disabled={verifyingId === asset.id}
+                          title="Mark physically verified for year-end inventory"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border border-[#C1C7D0] dark:border-[#2E3A4D] text-[#42526E] dark:text-[#CBD5E1] hover:border-[#00875A] hover:text-[#00875A] transition-colors"
+                        >
+                          {verifyingId === asset.id ? <Loader2 size={11} className="animate-spin"/> : <CheckCircle2 size={11} />}
+                          Verify
+                        </button>
+                      ) : null}
+                      {canEdit && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => onEdit(asset)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><Edit2 size={14}/></button>
+                          <button onClick={() => onDuplicate(asset)} className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"><Copy size={14}/></button>
+                          <button onClick={() => onDelete(asset.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>
