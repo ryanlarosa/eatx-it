@@ -76,7 +76,7 @@ const NotificationPanel = ({
   return (
     <div
       ref={panelRef}
-      className="absolute top-10 right-0 w-80 md:w-96 z-50 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg flex flex-col max-h-[440px]"
+      className="absolute top-10 right-0 w-80 md:w-96 z-40 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg flex flex-col max-h-[440px]"
     >
       <div className="px-4 py-2.5 border-b border-[#DFE3E8] dark:border-[#2A3444] flex justify-between items-center bg-[#F9FAFB] dark:bg-[#1B2230]">
         <div className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] flex items-center gap-2">
@@ -183,7 +183,7 @@ const QuickActionsMenu = () => {
       </button>
 
       {open && (
-        <div className="absolute top-10 right-0 w-52 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg py-1 z-50">
+        <div className="absolute top-10 right-0 w-52 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg py-1 z-40">
           {actions.map((a) => {
             const Icon = a.icon;
             return (
@@ -245,7 +245,7 @@ const UserDropdown = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-10 right-0 w-52 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg py-1 z-50">
+        <div className="absolute top-10 right-0 w-52 bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-lg py-1 z-40">
           <div className="px-3 py-2 border-b border-[#EBECF0] dark:border-[#242E40]">
             <div className="text-[13px] font-medium text-[#172B4D] dark:text-[#E6EDF5] truncate">
               {user?.email}

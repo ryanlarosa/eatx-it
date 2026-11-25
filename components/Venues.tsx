@@ -785,7 +785,7 @@ const Venues: React.FC = () => {
 
       {/* Quick Log Site Visit Modal */}
       {showQuickVisitModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] max-w-lg w-full shadow-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230] flex items-center justify-between">
               <h3 className="text-[15px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
@@ -933,7 +933,7 @@ const Venues: React.FC = () => {
 
       {/* Create / Edit Venue Modal */}
       {showVenueModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[80] bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-lg w-full p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
@@ -1099,7 +1099,7 @@ const Venues: React.FC = () => {
 
       {/* Venue Detail Modal */}
       {selectedVenue && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-[1px] flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4">

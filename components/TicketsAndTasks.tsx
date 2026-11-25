@@ -763,7 +763,7 @@ const TicketsAndTasks: React.FC = () => {
 
       {/* Detail / Create Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded max-w-2xl w-full max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230] flex items-center justify-between">
               <div className="flex items-center gap-2.5">

@@ -867,7 +867,7 @@ const Settings: React.FC = () => {
       )}
 
       {/* Toasts */}
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
+      <div className="fixed bottom-5 right-5 z-[90] flex flex-col gap-2">
         {successMsg && (
           <div className="bg-[#00875A] text-white px-4 py-2.5 rounded shadow-lg flex items-center gap-2 text-[13px]">
             <Check size={15} /> {successMsg}
@@ -882,7 +882,7 @@ const Settings: React.FC = () => {
 
       {/* Delete / Reset Confirmation Modal */}
       {deleteConfirmation.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-xl max-w-sm w-full p-5 space-y-4">
             <h3 className="text-[15px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
               {deleteConfirmation.type === "reset"
@@ -918,7 +918,7 @@ const Settings: React.FC = () => {
 
       {/* Rename Modal */}
       {editState.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#2A3444] shadow-xl max-w-sm w-full p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-[15px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">

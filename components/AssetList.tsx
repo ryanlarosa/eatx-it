@@ -529,7 +529,7 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
 
       {/* Success Modal */}
       {showImportSuccess !== null && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in">
                 <div className="flex flex-col items-center text-center gap-6">
                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-5 rounded-full text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-100 dark:border-emerald-900/30">

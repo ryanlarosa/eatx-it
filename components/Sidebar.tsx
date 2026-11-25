@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#141A24] text-[#CBD5E1] border-r border-[#242E40] transition-all duration-200 ease-out
+        className={`fixed inset-y-0 left-0 z-50 md:z-30 flex flex-col bg-[#141A24] text-[#CBD5E1] border-r border-[#242E40] transition-all duration-200 ease-out
           w-[236px] ${isCollapsed ? "md:w-[60px]" : "md:w-[236px]"}
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}

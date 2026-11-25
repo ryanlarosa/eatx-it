@@ -924,7 +924,7 @@ const StaffView: React.FC = () => {
 
       {/* Link Generated Modal */}
       {linkModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-100 dark:border-slate-800 animate-in fade-in zoom-in">
                 <div className="flex justify-between items-start mb-6">
                     <div>
