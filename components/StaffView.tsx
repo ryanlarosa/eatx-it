@@ -419,21 +419,21 @@ const StaffView: React.FC = () => {
     <div className="space-y-6 relative h-full">
       <header className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Employees & Handovers</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">Employee IT profiles, onboarding/offboarding checklists, and digital handovers.</p>
+          <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">Employees &amp; Handovers</h1>
+          <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">Employee IT profiles, onboarding/offboarding checklists, and digital handovers.</p>
         </div>
-        <div className="flex flex-wrap bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl self-start border border-slate-200 dark:border-slate-700 shadow-sm">
-            <button onClick={() => setView('profiles')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'profiles' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                <UserIcon size={16} /> IT Profiles
+        <div className="flex flex-wrap bg-white dark:bg-[#161C26] p-1 rounded self-start border border-[#DFE3E8] dark:border-[#242E40]">
+            <button onClick={() => setView('profiles')} className={`px-3 py-1.5 text-[13px] font-medium rounded flex items-center gap-1.5 transition-colors ${view === 'profiles' ? 'bg-[#0052CC] text-white' : 'text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
+                <UserIcon size={15} /> IT Profiles
             </button>
-            <button onClick={() => setView('manage')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'manage' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                <RotateCcw size={16} /> Handover Workflow
+            <button onClick={() => setView('manage')} className={`px-3 py-1.5 text-[13px] font-medium rounded flex items-center gap-1.5 transition-colors ${view === 'manage' ? 'bg-[#0052CC] text-white' : 'text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
+                <RotateCcw size={15} /> Handover Workflow
             </button>
-            <button onClick={() => setView('pending')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'pending' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                <LinkIcon size={16} /> Pending Links
+            <button onClick={() => setView('pending')} className={`px-3 py-1.5 text-[13px] font-medium rounded flex items-center gap-1.5 transition-colors ${view === 'pending' ? 'bg-[#0052CC] text-white' : 'text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
+                <LinkIcon size={15} /> Pending Links
             </button>
-            <button onClick={() => setView('documents')} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all ${view === 'documents' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
-                <FileText size={16} /> Documents
+            <button onClick={() => setView('documents')} className={`px-3 py-1.5 text-[13px] font-medium rounded flex items-center gap-1.5 transition-colors ${view === 'documents' ? 'bg-[#0052CC] text-white' : 'text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
+                <FileText size={15} /> Documents
             </button>
         </div>
       </header>

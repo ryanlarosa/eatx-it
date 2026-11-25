@@ -248,7 +248,7 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
     } catch (err) { console.error(err); alert("Error parsing file. Ensure it follows the template format."); } finally { setIsImporting(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
 
-  const inputClass = "p-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-[#0b1120] text-slate-700 dark:text-white focus:ring-1 focus:ring-blue-500 outline-none text-sm transition-all";
+  const inputClass = "p-2 border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none text-[13px] transition-colors";
 
   return (
     <div className="space-y-5">
@@ -288,13 +288,13 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
       </div>
 
       {/* Search & Actions Bar */}
-      <div className="flex flex-col md:flex-row items-center gap-3">
+      <div className="flex flex-col md:flex-row items-center gap-2.5">
         <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B778C]" size={16} />
             <input 
                 type="text" 
-                placeholder="Global search..." 
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm"
+                placeholder="Search asset name, tag, description..." 
+                className="w-full pl-9 pr-4 py-2 bg-white dark:bg-[#161C26] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded text-[13px] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none transition-colors"
                 value={searchTerm} 
                 onChange={e => setSearchTerm(e.target.value)} 
             />
@@ -302,16 +302,16 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
         
         <div className="flex items-center gap-2" ref={columnMenuRef}>
             <div className="relative">
-                <button onClick={() => setShowColumnMenu(!showColumnMenu)} className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-sm transition-all">
-                    <Columns size={16} className="text-slate-400" /> Columns
+                <button onClick={() => setShowColumnMenu(!showColumnMenu)} className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded text-[13px] font-medium text-[#172B4D] dark:text-[#E6EDF5] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors">
+                    <Columns size={15} className="text-[#6B778C]" /> Columns
                 </button>
                 {showColumnMenu && (
-                    <div className="absolute right-0 top-12 w-60 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right">
-                        <div className="p-3 bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Toggle Columns</div>
-                        <div className="p-2 space-y-1">
+                    <div className="absolute right-0 top-11 w-56 bg-white dark:bg-[#161C26] rounded shadow-lg border border-[#DFE3E8] dark:border-[#2A3444] z-50 overflow-hidden">
+                        <div className="px-3 py-2 bg-[#F9FAFB] dark:bg-[#1B2230] border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold text-[#6B778C] uppercase tracking-wide">Toggle Columns</div>
+                        <div className="p-1.5 space-y-0.5">
                             {AVAILABLE_COLUMNS.map(col => (
-                                <label key={col.id} className="flex items-center gap-2 p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer text-xs text-slate-700 dark:text-slate-300 font-bold uppercase">
-                                    <input type="checkbox" checked={visibleColumns[col.id]} onChange={() => toggleColumn(col.id)} className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-950"/>
+                                <label key={col.id} className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] cursor-pointer text-xs text-[#172B4D] dark:text-[#E6EDF5] font-medium">
+                                    <input type="checkbox" checked={visibleColumns[col.id]} onChange={() => toggleColumn(col.id)} className="rounded border-[#C1C7D0] text-[#0052CC]"/>
                                     {col.label}
                                 </label>
                             ))}
@@ -321,12 +321,12 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
             </div>
 
             {canEdit && (
-                <div className="flex gap-2">
-                    <button onClick={handleDownloadTemplate} className="p-2.5 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 hover:text-amber-500 shadow-sm transition-colors" title="Download Import Template"><FileSpreadsheet size={18}/></button>
-                    <button onClick={() => fileInputRef.current?.click()} className="p-2.5 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 hover:text-emerald-500 shadow-sm transition-colors" title="Import / Bulk Update">
-                        {isImporting ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18}/>}
+                <div className="flex gap-1.5">
+                    <button onClick={handleDownloadTemplate} className="p-2 bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded text-[#5E6C84] hover:text-[#D97706] transition-colors" title="Download Import Template"><FileSpreadsheet size={16}/></button>
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded text-[#5E6C84] hover:text-[#00875A] transition-colors" title="Import / Bulk Update">
+                        {isImporting ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16}/>}
                     </button>
-                    <button onClick={handleExportData} className="p-2.5 bg-white dark:bg-[#020617] border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 hover:text-blue-500 shadow-sm transition-colors" title="Export Full Registry"><FileOutput size={18}/></button>
+                    <button onClick={handleExportData} className="p-2 bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded text-[#5E6C84] hover:text-[#0052CC] transition-colors" title="Export Full Registry"><FileOutput size={16}/></button>
                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx, .xls" />
                 </div>
             )}

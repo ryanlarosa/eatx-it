@@ -23,7 +23,7 @@ const Settings: React.FC = () => {
   // Create User State
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPass, setNewUserPass] = useState('');
-  const [newUserRole, setNewUserRole] = useState<UserRole>('viewer');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('management');
   const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   // Constraint Checking State
@@ -319,7 +319,7 @@ const Settings: React.FC = () => {
       }
   };
 
-  const inputClass = "w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900 dark:focus:ring-blue-600 transition-all";
+  const inputClass = "w-full px-3 py-2 border border-[#C1C7D0] dark:border-[#2E3A4D] rounded text-[13px] bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none transition-colors";
 
   if (!isAdmin && !isSandboxUser) {
       return (
@@ -356,10 +356,13 @@ const Settings: React.FC = () => {
   return (
     <div className="space-y-6 relative pb-12">
       <div className="flex items-center justify-between">
-         <h1 className="text-2xl font-bold text-slate-800 dark:text-white">IT Hub Configuration</h1>
-         <div className="flex items-center gap-2 text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-900/30">
-             <Check size={14} />
-             <span>Connected to Cloud</span>
+         <div>
+           <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">Settings</h1>
+           <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">System environment, user roles, email alerts, and master lists.</p>
+         </div>
+         <div className="flex items-center gap-2 text-xs font-mono text-[#00875A] dark:text-[#36B37E] bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded border border-emerald-200 dark:border-emerald-900/40">
+             <Check size={13} />
+             <span>Connected</span>
          </div>
       </div>
 
@@ -498,14 +501,15 @@ const Settings: React.FC = () => {
                         onChange={e => setNewUserRole(e.target.value as UserRole)}
                         className={inputClass}
                       >
-                          <option value="viewer">Viewer</option>
-                          <option value="technician">Technician</option>
-                          <option value="admin">Admin</option>
+                          <option value="management">Management (Read-Only Executive)</option>
+                          <option value="technician">IT Support (Technician)</option>
+                          <option value="admin">IT Admin</option>
+                          <option value="requester">Portal Requester</option>
                           <option value="sandbox_user">Sandbox User</option>
                       </select>
                   </div>
-                  <button disabled={isCreatingUser} type="submit" className="w-full md:w-auto bg-slate-900 dark:bg-blue-600 text-white p-2 px-4 rounded-lg text-sm font-medium hover:bg-black dark:hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2">
-                      {isCreatingUser ? <Loader2 className="animate-spin" size={18}/> : <Plus size={18}/>} Create
+                  <button disabled={isCreatingUser} type="submit" className="w-full md:w-auto bg-[#0052CC] hover:bg-[#0043A8] text-white px-4 py-2 rounded text-[13px] font-medium disabled:opacity-50 flex items-center justify-center gap-1.5 transition-colors">
+                      {isCreatingUser ? <Loader2 className="animate-spin" size={15}/> : <Plus size={15}/>} Create
                   </button>
               </form>
           </div>
@@ -548,9 +552,10 @@ const Settings: React.FC = () => {
                                         className="p-1.5 border border-slate-200 dark:border-slate-700 rounded text-slate-700 dark:text-slate-300 focus:ring-2 focus:ring-slate-900 dark:focus:ring-blue-600 text-xs bg-white dark:bg-slate-900"
                                         disabled={currentUser?.uid === u.uid}
                                       >
-                                          <option value="admin">Promote to Admin</option>
-                                          <option value="technician">Set as Technician</option>
-                                          <option value="viewer">Demote to Viewer</option>
+                                          <option value="admin">IT Admin</option>
+                                          <option value="technician">IT Support (Technician)</option>
+                                          <option value="management">Management (Read-Only)</option>
+                                          <option value="requester">Portal Requester</option>
                                           <option value="sandbox_user">Restrict to Sandbox</option>
                                       </select>
                                   </td>

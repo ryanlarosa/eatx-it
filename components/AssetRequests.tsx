@@ -139,30 +139,30 @@ const AssetRequests: React.FC = () => {
     const publicLink = `${window.location.origin}/#/request-asset${isSandbox ? '?env=sandbox' : ''}`;
 
     return (
-        <div className="space-y-6">
-            <header className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <div className="space-y-5">
+            <header className="flex flex-col md:flex-row justify-between md:items-center gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <ShoppingBag className="text-slate-900 dark:text-white"/> Asset Requests
+                    <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">
+                        Procurement &amp; Requests
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Track lifecycle: Request → Acknowledge → Finance/Stock → Deploy</p>
+                    <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">Track lifecycle: Request → Acknowledge → Finance/Stock → Deploy</p>
                 </div>
-                <button onClick={() => navigator.clipboard.writeText(publicLink)} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 text-sm font-medium w-fit">
-                    <LinkIcon size={16} /> Copy Request Link
+                <button onClick={() => navigator.clipboard.writeText(publicLink)} className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] text-[#172B4D] dark:text-[#E6EDF5] px-3 py-2 rounded hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] flex items-center gap-2 text-[13px] font-medium w-fit">
+                    <LinkIcon size={15} /> Copy Staff Request Link
                 </button>
             </header>
 
-            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden min-h-[600px] flex flex-col">
-                <div className="flex border-b border-slate-200 dark:border-slate-800">
-                     <button onClick={() => setActiveTab('active')} className={`flex-1 py-3 text-sm font-medium border-b-2 flex items-center justify-center gap-2 ${activeTab === 'active' ? 'border-indigo-600 text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+            <div className="bg-white dark:bg-[#161C26] rounded border border-[#DFE3E8] dark:border-[#242E40] overflow-hidden min-h-[560px] flex flex-col">
+                <div className="flex border-b border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230]">
+                     <button onClick={() => setActiveTab('active')} className={`px-5 py-3 text-[13px] font-medium border-b-2 flex items-center gap-2 ${activeTab === 'active' ? 'border-[#0052CC] text-[#0052CC] dark:text-[#4C9AFF] dark:border-[#4C9AFF]' : 'border-transparent text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
                         Active Queue
                         {requests.filter(r => ['New', 'Acknowledged', 'Pending Finance', 'Approved'].includes(r.status)).length > 0 && 
-                            <span className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                            <span className="bg-[#0052CC] text-white text-[11px] font-mono px-1.5 rounded">
                                 {requests.filter(r => ['New', 'Acknowledged', 'Pending Finance', 'Approved'].includes(r.status)).length}
                             </span>
                         }
                     </button>
-                    <button onClick={() => setActiveTab('history')} className={`flex-1 py-3 text-sm font-medium border-b-2 ${activeTab === 'history' ? 'border-slate-900 dark:border-blue-600 text-slate-900 dark:text-white' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+                    <button onClick={() => setActiveTab('history')} className={`px-5 py-3 text-[13px] font-medium border-b-2 ${activeTab === 'history' ? 'border-[#0052CC] text-[#0052CC] dark:text-[#4C9AFF] dark:border-[#4C9AFF]' : 'border-transparent text-[#5E6C84] dark:text-[#94A3B8] hover:text-[#172B4D]'}`}>
                         History (Deployed / Rejected)
                     </button>
                 </div>

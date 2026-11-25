@@ -103,21 +103,21 @@ const Invoices: React.FC = () => {
         (a.supplier && a.supplier.toLowerCase().includes(searchAsset.toLowerCase()))
     );
 
-    const inputClass = "w-full p-2 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-900 dark:focus:ring-blue-600";
-    const labelClass = "block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1";
+    const inputClass = "w-full px-3 py-2 border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none text-[13px]";
+    const labelClass = "block text-xs font-semibold text-[#42526E] dark:text-[#CBD5E1] mb-1";
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             <header className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <Receipt className="text-slate-900 dark:text-white"/> Invoices
+                    <h1 className="text-[20px] font-semibold tracking-tight text-[#172B4D] dark:text-[#E6EDF5]">
+                        Invoices
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Upload and manage purchase invoices.</p>
+                    <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">Upload and manage IT hardware purchase invoices.</p>
                 </div>
                 {canEdit && (
-                    <button onClick={() => setIsCreating(true)} className="bg-slate-900 dark:bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-black dark:hover:bg-blue-700 flex items-center gap-2 font-medium shadow-sm transition-all">
-                        <Plus size={20} /> Upload Invoice
+                    <button onClick={() => setIsCreating(true)} className="bg-[#0052CC] hover:bg-[#0043A8] text-white px-3.5 py-2 rounded flex items-center gap-1.5 font-medium text-[13px] transition-colors">
+                        <Plus size={15} /> Upload Invoice
                     </button>
                 )}
             </header>
