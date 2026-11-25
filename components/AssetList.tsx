@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Asset, ASSET_STATUSES, AssetStatus } from '../types';
 import { Edit2, Trash2, Search, MapPin, Tag, User, Upload, AlertTriangle, Lock, Building2, Columns, Check, RefreshCw, ChevronLeft, ChevronRight, FileSpreadsheet, FileOutput, QrCode, X, CheckCircle2, Copy, ChevronsLeft, ChevronsRight, ShoppingCart, Loader2 } from 'lucide-react';
-import { importAssetsBulk, getAppConfig, getCurrentUserProfile, getSandboxStatus, markAssetVerified } from '../services/storageService';
+import { importAssetsBulk, getAppConfig, saveAppConfig, getVenues, syncVenuesFromLocations, getEmployees, syncEmployeesFromAssets, getCurrentUserProfile, getSandboxStatus, markAssetVerified } from '../services/storageService';
 import ExcelJS from 'exceljs';
 import QRCode from 'react-qr-code';
 import ReactDOMServer from 'react-dom/server';
@@ -241,6 +241,42 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
 
         if (newAssets.length > 0) {
             await importAssetsBulk(newAssets);
+
+            // Auto-sync Categories, Locations/Venues, Departments & Employee IT Profiles into Firestore
+            try {
+                const currentConfig = await getAppConfig();
+                const mergeUnique = (existing: string[] = [], incoming: (string | undefined)[]) => {
+                    const map = new Map<string, string>();
+                    existing.forEach(v => { const clean = v?.trim(); if (clean) map.set(clean.toLowerCase(), clean); });
+                    incoming.forEach(v => { const clean = v?.trim(); if (clean && !map.has(clean.toLowerCase())) map.set(clean.toLowerCase(), clean); });
+                    return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+                };
+
+                const nextCategories = mergeUnique(currentConfig.categories, newAssets.map(a => a.category));
+                const nextLocations = mergeUnique(currentConfig.locations, newAssets.map(a => a.location));
+                const nextDepartments = mergeUnique(currentConfig.departments, newAssets.map(a => a.department));
+
+                await saveAppConfig({
+                    categories: nextCategories,
+                    locations: nextLocations,
+                    departments: nextDepartments,
+                });
+                setCategories(nextCategories);
+                setLocations(nextLocations);
+                setDepartments(nextDepartments);
+
+                const [existingVenues, existingEmployees] = await Promise.all([
+                    getVenues().catch(() => []),
+                    getEmployees().catch(() => []),
+                ]);
+                await Promise.all([
+                    syncVenuesFromLocations(nextLocations, existingVenues),
+                    syncEmployeesFromAssets(newAssets, existingEmployees),
+                ]);
+            } catch (syncErr) {
+                console.warn('Partial config/venue/employee auto-sync warning:', syncErr);
+            }
+
             setShowImportSuccess(newAssets.length);
         } else {
             alert("No valid data found in the spreadsheet.");

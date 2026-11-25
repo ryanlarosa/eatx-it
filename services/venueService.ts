@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -17,6 +18,17 @@ import {
   OperationType,
 } from "./firebase";
 import { Venue, VenueVisit } from "../types";
+
+export const getVenues = async (): Promise<Venue[]> => {
+  const path = getColName("venues");
+  try {
+    const snap = await getDocs(query(collection(db, path), orderBy("name", "asc")));
+    return snapToData<Venue>(snap);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+};
 
 export const listenToVenues = (cb: (venues: Venue[]) => void) => {
   const path = getColName("venues");

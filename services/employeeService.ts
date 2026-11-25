@@ -2,6 +2,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -41,6 +42,17 @@ export const DEFAULT_OFFBOARDING_CHECKLIST = (): ITChecklistItem[] => [
   { id: "off-4", label: "Digital Asset Return form signed", done: false },
   { id: "off-5", label: "Assets reset & returned to IT Storage", done: false },
 ];
+
+export const getEmployees = async (): Promise<EmployeeITProfile[]> => {
+  const path = getColName("employees");
+  try {
+    const snap = await getDocs(query(collection(db, path), orderBy("name", "asc")));
+    return snapToData<EmployeeITProfile>(snap);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return [];
+  }
+};
 
 export const listenToEmployees = (cb: (employees: EmployeeITProfile[]) => void) => {
   const path = getColName("employees");
