@@ -9,14 +9,12 @@ import {
   listenToIncidents,
   createIncidentReport,
   updateIncidentReport,
-  deleteIncidentReport,
   processAssetReplacement,
   listenToVendors,
   saveVendor,
   getAppConfig,
   getCurrentUserProfile,
   canManageOperations,
-  isAdminRole,
 } from "../services/storageService";
 import { useAppData } from "../context/AppDataContext";
 import {
@@ -26,12 +24,19 @@ import {
   List as ListIcon,
   X,
   Save,
-  Trash2,
   Link2,
   Check,
   Loader2,
   RefreshCw,
+  UserCheck,
 } from "lucide-react";
+
+const resolveTechName = (displayName?: string, email?: string) => {
+  const combined = `${displayName || ""} ${email || ""}`.toLowerCase();
+  if (combined.includes("diego")) return "Diego";
+  if (combined.includes("ryan") || combined.includes("it@eatx.com")) return "Ryan";
+  return displayName || email?.split("@")[0] || "Ryan";
+};
 
 const IT_OWNERS = ["Ryan", "Diego"];
 const WORK_STATUSES: WorkItemStatus[] = [
@@ -116,14 +121,18 @@ const TicketsAndTasks: React.FC = () => {
   const [quickVendorName, setQuickVendorName] = useState("");
   const [replacementAssetId, setReplacementAssetId] = useState("");
   const [showReplacePanel, setShowReplacePanel] = useState(false);
+  const [rejectPrompt, setRejectPrompt] = useState<{
+    open: boolean;
+    itemId: string;
+    reason: string;
+  }>({ open: false, itemId: "", reason: "" });
 
   const user = getCurrentUserProfile();
   const canEdit = canManageOperations(user);
-  const isAdmin = isAdminRole(user);
 
   useEffect(() => {
     const u1 = listenToIncidents((data) => {
-      setItems(data);
+      setItems(data.filter((i) => i.itemType !== "POS_Supy"));
       setLoading(false);
     });
     const u2 = listenToVendors(setVendors);
@@ -226,10 +235,19 @@ const TicketsAndTasks: React.FC = () => {
     const title = (draft.title || draft.assetName || "").trim();
     if (!title) return;
 
+    if (draft.status === "Rejected" && !draft.rejectionReason?.trim()) {
+      if (draft.id) {
+        setRejectPrompt({ open: true, itemId: draft.id, reason: "" });
+      } else {
+        alert("Please provide a rejection reason before marking as Rejected.");
+      }
+      return;
+    }
+
     setSaving(true);
     try {
       const resolvedNow =
-        draft.status === "Resolved" && !draft.resolvedAt
+        (draft.status === "Resolved" || draft.status === "Rejected") && !draft.resolvedAt
           ? new Date().toISOString()
           : draft.resolvedAt;
 
@@ -247,6 +265,7 @@ const TicketsAndTasks: React.FC = () => {
             externalTicketRef: draft.externalTicketRef?.trim() || "",
             description: draft.description?.trim() || "",
             resolutionNotes: draft.resolutionNotes?.trim() || "",
+            rejectionReason: draft.rejectionReason?.trim() || "",
             priority: draft.priority || "Medium",
             status: draft.status || "Open",
             checklist: draft.checklist || [],
@@ -283,11 +302,29 @@ const TicketsAndTasks: React.FC = () => {
     }
   };
 
+  const handleAcceptTicket = async (item: IncidentReport) => {
+    if (!canEdit) return;
+    const tech = resolveTechName(user?.displayName, user?.email);
+    await updateIncidentReport(item.id, {
+      acceptedBy: item.acceptedBy || tech,
+      assignedTo: tech,
+      status: item.status === "New" ? "Open" : item.status,
+    });
+  };
+
   const handleQuickStatus = async (
     item: IncidentReport,
     status: WorkItemStatus
   ) => {
     if (!canEdit) return;
+    if (status === "Rejected") {
+      setRejectPrompt({
+        open: true,
+        itemId: item.id,
+        reason: item.rejectionReason || "",
+      });
+      return;
+    }
     await updateIncidentReport(
       item.id,
       {
@@ -297,6 +334,20 @@ const TicketsAndTasks: React.FC = () => {
       },
       status === "Resolved"
     );
+  };
+
+  const confirmReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rejectPrompt.reason.trim()) return;
+    const reason = rejectPrompt.reason.trim();
+    await updateIncidentReport(rejectPrompt.itemId, {
+      status: "Rejected",
+      rejectionReason: reason,
+      resolutionNotes: `Rejected: ${reason}`,
+      resolvedAt: new Date().toISOString(),
+    });
+    if (draft.id === rejectPrompt.itemId) setModalOpen(false);
+    setRejectPrompt({ open: false, itemId: "", reason: "" });
   };
 
   const handleReplaceAsset = async () => {
@@ -312,14 +363,6 @@ const TicketsAndTasks: React.FC = () => {
       setModalOpen(false);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!isAdmin) return;
-    if (confirm("Delete this ticket/task permanently?")) {
-      await deleteIncidentReport(id);
-      setModalOpen(false);
     }
   };
 
@@ -652,8 +695,20 @@ const TicketsAndTasks: React.FC = () => {
                       <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8] whitespace-nowrap">
                         {item.location || "—"}
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {item.assignedTo || (
+                      <td
+                        className="px-4 py-2.5 whitespace-nowrap"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {item.assignedTo ? (
+                          <span>{item.assignedTo}</span>
+                        ) : canEdit ? (
+                          <button
+                            onClick={() => handleAcceptTicket(item)}
+                            className="px-2.5 py-1 rounded bg-[#0052CC] hover:bg-[#0043A8] text-white text-xs font-medium inline-flex items-center gap-1"
+                          >
+                            <UserCheck size={12} /> Accept
+                          </button>
+                        ) : (
                           <span className="text-[#8A99B0]">Unassigned</span>
                         )}
                       </td>
@@ -778,16 +833,6 @@ const TicketsAndTasks: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center gap-1.5">
-                {draft.id && isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(draft.id!)}
-                    className="p-1.5 text-[#DE350B] hover:bg-[#FFEBE6] dark:hover:bg-red-950/30 rounded"
-                    title="Delete"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
@@ -1064,6 +1109,25 @@ const TicketsAndTasks: React.FC = () => {
                 />
               </div>
 
+              {draft.status === "Rejected" && (
+                <div>
+                  <label className="block text-xs font-semibold text-[#DE350B] mb-1">
+                    Rejection Reason *
+                  </label>
+                  <textarea
+                    required
+                    disabled={!canEdit}
+                    rows={2}
+                    value={draft.rejectionReason || ""}
+                    onChange={(e) =>
+                      setDraft({ ...draft, rejectionReason: e.target.value })
+                    }
+                    placeholder="Reason for rejecting this ticket/task..."
+                    className={inputClass}
+                  />
+                </div>
+              )}
+
               {/* Optional Hardware Replacement if linked to an Asset */}
               {canEdit && draft.id && draft.assetId && draft.status !== "Resolved" && (
                 <div className="p-3 rounded bg-[#F9FAFB] dark:bg-[#1B2230] border border-[#DFE3E8] dark:border-[#2A3444] space-y-2">
@@ -1184,6 +1248,51 @@ const TicketsAndTasks: React.FC = () => {
               )}
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectPrompt.open && (
+        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
+          <form
+            onSubmit={confirmReject}
+            className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#2A3444] rounded max-w-md w-full p-5 space-y-4 shadow-xl"
+          >
+            <h3 className="text-[15px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+              Rejection Reason Required
+            </h3>
+            <p className="text-xs text-[#5E6C84] dark:text-[#94A3B8]">
+              Tickets &amp; tasks cannot be deleted. Please enter a clear reason before rejecting.
+            </p>
+            <textarea
+              required
+              autoFocus
+              rows={3}
+              value={rejectPrompt.reason}
+              onChange={(e) =>
+                setRejectPrompt({ ...rejectPrompt, reason: e.target.value })
+              }
+              placeholder="Explain why this ticket/task is being rejected..."
+              className={inputClass}
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setRejectPrompt({ open: false, itemId: "", reason: "" })
+                }
+                className="px-3.5 py-2 text-[13px] border border-[#DFE3E8] dark:border-[#2A3444] rounded"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3.5 py-2 text-[13px] bg-[#DE350B] text-white rounded font-medium"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>

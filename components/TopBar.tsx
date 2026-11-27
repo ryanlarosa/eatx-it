@@ -36,6 +36,7 @@ const ROUTE_META: Record<string, { section: string; label: string }> = {
   "/venues": { section: "Infrastructure", label: "Venues & Sites" },
   "/staff": { section: "Infrastructure", label: "Employees & Handovers" },
   "/tickets": { section: "Service & Delivery", label: "Tickets & Tasks" },
+  "/pos-supy": { section: "Service & Delivery", label: "POS / Supy Issues" },
   "/tasks": { section: "Service & Delivery", label: "Tickets & Tasks" },
   "/repairs": { section: "Service & Delivery", label: "Tickets & Tasks" },
   "/planner": { section: "Service & Delivery", label: "Projects" },

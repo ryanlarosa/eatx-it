@@ -100,6 +100,20 @@ export const markAssetVerified = async (assetId: string, assetName?: string) => 
   }
 };
 
+export const unverifyAsset = async (assetId: string) => {
+  const path = getColName("assets");
+  const now = new Date().toISOString();
+  try {
+    await setDoc(
+      doc(db, path, assetId),
+      { lastAuditedAt: "", lastAuditedBy: "", lastUpdated: now },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+};
+
 export const importAssetsBulk = async (assets: Asset[]) => {
   const path = getColName("assets");
   try {

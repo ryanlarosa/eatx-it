@@ -5,90 +5,63 @@ import {
   createAssetRequest,
   getSandboxStatus,
 } from "../services/storageService";
-import {
-  Loader2,
-  CheckCircle2,
-  Plus,
-  Trash2,
-  Send,
-} from "lucide-react";
+import { Loader2, CheckCircle2, Send } from "lucide-react";
 import StaffPortalGate from "./StaffPortalGate";
 
 const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
   const [departments, setDepartments] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const [requestType, setRequestType] = useState<"individual" | "department">(
-    "individual"
-  );
+  // Scope: Head Office vs Venue (1 equipment request per ticket)
+  const [scope, setScope] = useState<"Head Office" | "Venue">("Head Office");
   const [submitterName, setSubmitterName] = useState(
     user.displayName || user.email.split("@")[0] || ""
   );
   const [submitterEmail] = useState(user.email || "");
-  const [employeeName, setEmployeeName] = useState("");
+  const [venue, setVenue] = useState("");
   const [department, setDepartment] = useState("");
-  const [requestItems, setRequestItems] = useState<
-    { id: number; itemName: string }[]
-  >([{ id: Date.now(), itemName: "" }]);
+  const [beneficiaryName, setBeneficiaryName] = useState("");
+  const [itemName, setItemName] = useState("");
   const [urgency, setUrgency] = useState<"Low" | "Medium" | "High">("Medium");
   const [reason, setReason] = useState("");
 
   const isSandbox = getSandboxStatus();
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        const config = await getAppConfig();
+    getAppConfig()
+      .then((config) => {
         setDepartments(config.departments || []);
-      } catch (e) {
-        console.warn("Could not load config:", e);
-      }
-      setLoading(false);
-    };
-    init();
+        setLocations(config.locations || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
-
-  const addItem = () =>
-    setRequestItems([...requestItems, { id: Date.now(), itemName: "" }]);
-
-  const removeItem = (id: number) => {
-    if (requestItems.length === 1) return;
-    setRequestItems(requestItems.filter((i) => i.id !== id));
-  };
-
-  const updateItem = (id: number, value: string) =>
-    setRequestItems(
-      requestItems.map((i) => (i.id === id ? { ...i, itemName: value } : i))
-    );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
-    const validItems = requestItems.filter((i) => i.itemName.trim());
-    if (validItems.length === 0) {
-      alert("Please specify at least one equipment item.");
-      return;
-    }
-
+    if (submitting || !itemName.trim()) return;
     setSubmitting(true);
     try {
-      const beneficiaryInfo =
-        requestType === "individual"
-          ? `For Employee: ${employeeName}`
-          : `For Department: ${department} (General Office/Outlet Use)`;
+      const targetInfo =
+        scope === "Venue"
+          ? `Scope: Venue (${venue})`
+          : `Scope: Head Office (${department}${
+              beneficiaryName ? ` — For: ${beneficiaryName}` : ""
+            })`;
 
-      for (const item of validItems) {
-        await createAssetRequest({
-          requesterName: submitterName,
-          requesterEmail: submitterEmail,
-          department,
-          category: item.itemName.trim(),
-          urgency,
-          reason: `${beneficiaryInfo}\n\nJustification: ${reason}`,
-        });
-      }
+      await createAssetRequest({
+        requesterName: submitterName,
+        requesterEmail: submitterEmail,
+        scope,
+        venue: scope === "Venue" ? venue : "Head Office",
+        department: scope === "Head Office" ? department : "Operations",
+        category: itemName.trim(),
+        urgency,
+        reason: `${targetInfo}\n\nJustification: ${reason.trim()}`,
+      });
       setSubmitted(true);
     } catch {
       alert("Submission failed. Please try again.");
@@ -99,8 +72,8 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
 
   const resetForm = () => {
     setSubmitted(false);
-    setEmployeeName("");
-    setRequestItems([{ id: Date.now(), itemName: "" }]);
+    setItemName("");
+    setBeneficiaryName("");
     setReason("");
     setUrgency("Medium");
   };
@@ -129,11 +102,9 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
                 Equipment request submitted
               </h2>
               <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8] mt-1">
-                Your request for{" "}
-                <strong>
-                  {requestItems.filter((i) => i.itemName.trim()).length}
-                </strong>{" "}
-                item(s) has been sent to EATX IT Procurement. Updates will be sent to{" "}
+                Your request for <strong>{itemName}</strong> ({scope}
+                {scope === "Venue" ? ` — ${venue}` : ""}) has been logged with
+                EATX IT Procurement. Updates will be sent to{" "}
                 <strong>{submitterEmail}</strong>.
               </p>
             </div>
@@ -162,7 +133,7 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
           Request IT Equipment
         </h1>
         <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
-          Request laptops, POS peripherals, printers, or accessories for staff or venue operations.
+          Submit one equipment request per ticket for Head Office or Venue operations.
         </p>
       </div>
 
@@ -172,34 +143,38 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
       >
         <div className="px-5 py-3 border-b border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230]">
           <h2 className="text-[13px] font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
-            Procurement request details
+            Procurement request details (1 item per ticket)
           </h2>
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Request Type */}
+          {/* Request Scope: Head Office vs Venue */}
           <div>
-            <label className={labelClass}>Request scope</label>
-            <div className="grid grid-cols-2 gap-2 max-w-md">
-              {(
-                [
-                  { id: "individual", label: "For an employee" },
-                  { id: "department", label: "For a venue / department" },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setRequestType(opt.id)}
-                  className={`py-2 px-3 rounded text-[13px] font-medium border transition-colors ${
-                    requestType === opt.id
-                      ? "bg-[#0052CC] text-white border-[#0052CC]"
-                      : "bg-white dark:bg-[#0F141C] text-[#42526E] dark:text-[#CBD5E1] border-[#C1C7D0] dark:border-[#2E3A4D]"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <label className={labelClass}>Location type *</label>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              {(["Head Office", "Venue"] as const).map((opt) => {
+                const active = scope === opt;
+                return (
+                  <label
+                    key={opt}
+                    className={`flex items-center gap-2.5 px-4 py-2.5 rounded border cursor-pointer text-[13px] font-medium transition-colors ${
+                      active
+                        ? "border-[#0052CC] bg-[#DEEBFF]/40 dark:bg-[#0052CC]/20 text-[#0052CC] dark:text-[#4C9AFF]"
+                        : "border-[#C1C7D0] dark:border-[#2E3A4D] bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="scope"
+                      value={opt}
+                      checked={active}
+                      onChange={() => setScope(opt)}
+                      className="accent-[#0052CC]"
+                    />
+                    <span>{opt}</span>
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -226,71 +201,68 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {requestType === "individual" && (
-              <div>
-                <label className={labelClass}>Beneficiary employee name *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Full name of employee receiving hardware"
-                  value={employeeName}
-                  onChange={(e) => setEmployeeName(e.target.value)}
-                  className={inputClass}
-                />
-              </div>
-            )}
+          {/* Conditional Head Office vs Venue Details */}
+          {scope === "Venue" ? (
             <div>
-              <label className={labelClass}>Department *</label>
+              <label className={labelClass}>Venue / Outlet *</label>
               <select
                 required
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
+                value={venue}
+                onChange={(e) => setVenue(e.target.value)}
                 className={inputClass}
               >
-                <option value="">Select department...</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
+                <option value="">Select venue...</option>
+                {locations
+                  .filter((l) => l.toLowerCase() !== "head office")
+                  .map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
               </select>
             </div>
-          </div>
-
-          {/* Equipment Items */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className={labelClass}>Requested equipment items *</label>
-              <button
-                type="button"
-                onClick={addItem}
-                className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline flex items-center gap-1"
-              >
-                <Plus size={13} /> Add another item
-              </button>
-            </div>
-            {requestItems.map((item, idx) => (
-              <div key={item.id} className="flex gap-2">
-                <input
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Department *</label>
+                <select
                   required
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Select department...</option>
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Employee / Recipient (optional)</label>
+                <input
                   type="text"
-                  placeholder={`Item ${idx + 1} (e.g. MacBook Air M3, Thermal Receipt Printer, iPad)`}
-                  value={item.itemName}
-                  onChange={(e) => updateItem(item.id, e.target.value)}
+                  placeholder="Name of employee if individual assignment"
+                  value={beneficiaryName}
+                  onChange={(e) => setBeneficiaryName(e.target.value)}
                   className={inputClass}
                 />
-                {requestItems.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    className="px-2.5 text-[#6B778C] hover:text-[#DE350B] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Single Equipment Item */}
+          <div>
+            <label className={labelClass}>Requested equipment item *</label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. MacBook Air M3, Thermal Receipt Printer, iPad 10th Gen"
+              value={itemName}
+              onChange={(e) => setItemName(e.target.value)}
+              className={inputClass}
+            />
           </div>
 
           {/* Urgency */}
@@ -330,7 +302,7 @@ const AssetRequestContent: React.FC<{ user: UserProfile }> = ({ user }) => {
 
         <div className="px-5 py-3.5 border-t border-[#EBECF0] dark:border-[#242E40] bg-[#F9FAFB] dark:bg-[#1B2230] flex items-center justify-between gap-3">
           <span className="text-xs text-[#6B778C]">
-            Subject to IT &amp; Finance review
+            1 equipment item per ticket • Follows EATX standard procurement workflow
           </span>
           <button
             type="submit"

@@ -19,10 +19,12 @@ const StaffView = lazy(() => import('./components/StaffView'));
 const SignHandover = lazy(() => import('./components/SignHandover'));
 const AssetRequests = lazy(() => import('./components/AssetRequests'));
 const PublicReportIssue = lazy(() => import('./components/PublicReportIssue'));
+const PublicPosSupyIssue = lazy(() => import('./components/PublicPosSupyIssue'));
 const PublicAssetRequest = lazy(() => import('./components/PublicAssetRequest'));
 const PublicStatusTracker = lazy(() => import('./components/PublicStatusTracker'));
 const Invoices = lazy(() => import('./components/Invoices'));
 const TicketsAndTasks = lazy(() => import('./components/TicketsAndTasks'));
+const PosSupyIssues = lazy(() => import('./components/PosSupyIssues'));
 const Venues = lazy(() => import('./components/Venues'));
 const Reports = lazy(() => import('./components/Reports'));
 
@@ -120,6 +122,7 @@ const AppShell = () => {
               {/* Staff Portal & Signing Routes */}
               <Route path="/sign/:id" element={<SignHandover />} />
               <Route path="/report-issue" element={<PublicReportIssue />} />
+              <Route path="/pos-supy-issue" element={<PublicPosSupyIssue />} />
               <Route path="/request-asset" element={<PublicAssetRequest />} />
               <Route path="/track" element={<PublicStatusTracker />} />
 
@@ -153,6 +156,7 @@ const AppShell = () => {
                                         <Route path="/assets" element={<AssetRegistryWrapper assets={assets} view={view} setView={setView} editingAsset={editingAsset} setEditingAsset={setEditingAsset} handleSaveAsset={handleSaveAsset} handleDuplicate={handleDuplicate} handleDeleteAsset={handleDeleteAsset} loading={loading} canEdit={canEdit} />} />
                                         <Route path="/requests" element={<AssetRequests />} />
                                         <Route path="/tickets" element={<TicketsAndTasks />} />
+                                        <Route path="/pos-supy" element={<PosSupyIssues />} />
                                         <Route path="/repairs" element={<Navigate to="/tickets" replace />} />
                                         <Route path="/tasks" element={<Navigate to="/tickets" replace />} />
                                         <Route path="/invoices" element={<Invoices />} />

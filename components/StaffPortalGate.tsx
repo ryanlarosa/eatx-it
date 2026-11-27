@@ -151,6 +151,7 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
 
   const navTabs = [
     { to: "/report-issue", label: "Report an Issue" },
+    { to: "/pos-supy-issue", label: "POS / Supy Issue" },
     { to: "/request-asset", label: "Request Equipment" },
     { to: "/track", label: "Track Status" },
   ];

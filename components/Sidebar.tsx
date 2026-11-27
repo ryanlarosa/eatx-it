@@ -69,6 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       title: "Service & Delivery",
       items: [
         { to: "/tickets", label: "Tickets & Tasks", icon: ClipboardList },
+        { to: "/pos-supy", label: "POS / Supy Issues", icon: LifeBuoy },
         {
           to: "/planner",
           label: "Projects",

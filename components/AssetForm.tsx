@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Asset, ASSET_STATUSES, AssetLog } from '../types';
 import { parseAssetDescription, isAiConfigured } from '../services/geminiService';
 import { getAppConfig, getAssetLogs } from '../services/storageService';
-import { Sparkles, Save, X, Loader2, Clock, User, Circle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, QrCode } from 'lucide-react';
+import { Sparkles, Save, X, Loader2, Clock, User, Circle, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, QrCode, Printer } from 'lucide-react';
 import QRCode from 'react-qr-code';
 
 interface AssetFormProps {
@@ -31,6 +31,8 @@ const emptyAsset: Asset = {
   purchaseCost: undefined,
   disposalDate: '',
   disposalReason: '',
+  printerIp: '',
+  printerPassword: '',
   lastUpdated: ''
 };
 
@@ -127,6 +129,7 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialData, onSave, onCancel }) 
 
   // Generate Deep Link URL for QR
   const qrUrl = initialData ? `${window.location.origin}${window.location.pathname}#/assets?id=${initialData.id}` : '';
+  const isPrinterCategory = (formData.category || '').toLowerCase().includes('printer');
 
   return (
     <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -272,6 +275,41 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialData, onSave, onCancel }) 
                     </select>
                     </div>
                 </div>
+
+                {isPrinterCategory && (
+                  <div className="p-4 rounded-lg bg-[#F4F5F7] dark:bg-[#1B2230] border border-[#DFE3E8] dark:border-[#2A3444] space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                      <Printer size={14} className="text-[#0052CC] dark:text-[#4C9AFF]" />
+                      Printer Network Configuration (Required)
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className={labelClass}>Printer IP Address <span className="text-red-500">*</span></label>
+                        <input
+                          required
+                          type="text"
+                          name="printerIp"
+                          value={formData.printerIp || ''}
+                          onChange={handleChange}
+                          className={inputClass}
+                          placeholder="e.g. 192.168.10.45"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>Printer Password <span className="text-red-500">*</span></label>
+                        <input
+                          required
+                          type="text"
+                          name="printerPassword"
+                          value={formData.printerPassword || ''}
+                          onChange={handleChange}
+                          className={inputClass}
+                          placeholder="e.g. Admin / Web UI password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>

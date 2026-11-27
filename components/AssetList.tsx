@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Asset, ASSET_STATUSES, AssetStatus } from '../types';
 import { Edit2, Trash2, Search, MapPin, Tag, User, Upload, AlertTriangle, Lock, Building2, Columns, Check, RefreshCw, ChevronLeft, ChevronRight, FileSpreadsheet, FileOutput, QrCode, X, CheckCircle2, Copy, ChevronsLeft, ChevronsRight, ShoppingCart, Loader2 } from 'lucide-react';
-import { importAssetsBulk, getAppConfig, saveAppConfig, getVenues, syncVenuesFromLocations, getEmployees, syncEmployeesFromAssets, getCurrentUserProfile, getSandboxStatus, markAssetVerified } from '../services/storageService';
+import { importAssetsBulk, getAppConfig, saveAppConfig, getVenues, syncVenuesFromLocations, getEmployees, syncEmployeesFromAssets, getCurrentUserProfile, getSandboxStatus, markAssetVerified, unverifyAsset } from '../services/storageService';
 import ExcelJS from 'exceljs';
 import QRCode from 'react-qr-code';
 import ReactDOMServer from 'react-dom/server';
@@ -107,11 +107,16 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
     return { verified, total, pct };
   }, [assets]);
 
-  const handleVerifyAsset = async (asset: Asset) => {
+  const handleToggleVerifyAsset = async (e: React.MouseEvent, asset: Asset) => {
+    e.stopPropagation();
     if (!canEdit) return;
     setVerifyingId(asset.id);
     try {
-      await markAssetVerified(asset.id, asset.name);
+      if (isVerifiedThisYear(asset)) {
+        await unverifyAsset(asset.id);
+      } else {
+        await markAssetVerified(asset.id, asset.name);
+      }
     } finally {
       setVerifyingId(null);
     }
@@ -391,106 +396,148 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
       {/* Table Container */}
       <div className="bg-white dark:bg-[#020617] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse table-fixed min-w-[1100px]">
+          <table className="w-full text-left border-collapse min-w-[1150px]">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800">
-                <th className="p-4 pl-6 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[18%]">Asset Name</th>
-                {visibleColumns.serialNumber && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[12%]">Serial No.</th>}
-                {visibleColumns.category && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[16%]">Category</th>}
-                {visibleColumns.status && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Status</th>}
-                {visibleColumns.location && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[12%]">Location</th>}
-                {visibleColumns.department && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Department</th>}
-                {visibleColumns.assignedEmployee && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[12%]">Assigned To</th>}
-                {visibleColumns.purchaseCost && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Cost</th>}
-                <th className="p-4 pr-6 text-[11px] font-black uppercase tracking-widest text-slate-400 w-[8%] text-right">Actions</th>
+                <th className="p-4 pl-6 text-[11px] font-black uppercase tracking-widest text-slate-400 min-w-[180px]">Asset Name</th>
+                {visibleColumns.serialNumber && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Serial No.</th>}
+                {visibleColumns.category && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Category</th>}
+                {visibleColumns.status && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Status</th>}
+                {visibleColumns.location && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Location</th>}
+                {visibleColumns.department && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Department</th>}
+                {visibleColumns.assignedEmployee && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Assigned To</th>}
+                {visibleColumns.purchaseCost && <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Cost</th>}
+                <th className="p-4 text-[11px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Audit</th>
+                <th className="p-4 pr-6 text-[11px] font-black uppercase tracking-widest text-slate-400 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
               {paginatedAssets.map(asset => (
-                <tr key={asset.id} className="group hover:bg-slate-50/50 dark:hover:bg-blue-500/[0.03] transition-colors">
-                  <td className="p-4 pl-6">
-                    <div className="font-black text-slate-900 dark:text-slate-100 text-[12px] uppercase truncate" title={asset.name}>{asset.name}</div>
+                <tr
+                  key={asset.id}
+                  onClick={() => onEdit(asset)}
+                  className="group cursor-pointer hover:bg-slate-50/80 dark:hover:bg-blue-500/[0.04] transition-colors"
+                >
+                  <td className="p-4 pl-6 max-w-[240px]">
+                    <div className="font-black text-slate-900 dark:text-slate-100 text-[12px] uppercase truncate group-hover:text-[#0052CC] dark:group-hover:text-[#4C9AFF] transition-colors" title={asset.name}>{asset.name}</div>
                   </td>
                   {visibleColumns.serialNumber && (
-                    <td className="p-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                    <td className="p-4 text-[11px] font-medium text-slate-500 dark:text-slate-400 max-w-[140px] truncate" title={asset.serialNumber || ''}>
                       {asset.serialNumber || '-'}
                     </td>
                   )}
                   {visibleColumns.category && (
-                    <td className="p-4">
+                    <td className="p-4 max-w-[170px]">
                       <div className="flex items-center gap-1.5 text-[9px] font-black bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-2 py-1 rounded-md w-fit text-slate-600 dark:text-slate-300 uppercase truncate max-w-full">
-                        <Tag size={10} className="text-slate-400 shrink-0"/> {asset.category}
+                        <Tag size={10} className="text-slate-400 shrink-0"/> <span className="truncate">{asset.category}</span>
                       </div>
                     </td>
                   )}
                   {visibleColumns.status && (
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tight border ${asset.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
                         {asset.status}
                       </span>
                     </td>
                   )}
                   {visibleColumns.location && (
-                    <td className="p-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate">
-                      <div className="flex items-center gap-1.5"><MapPin size={12} className="text-slate-300 shrink-0"/> {asset.location}</div>
+                    <td className="p-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={asset.location}>
+                      <div className="flex items-center gap-1.5"><MapPin size={12} className="text-slate-300 shrink-0"/> <span className="truncate">{asset.location}</span></div>
                     </td>
                   )}
                   {visibleColumns.department && (
-                    <td className="p-4 text-[11px] font-bold text-slate-500 dark:text-slate-500 truncate">
-                      <div className="flex items-center gap-1.5"><Building2 size={12} className="text-slate-300 shrink-0"/> {asset.department || '-'}</div>
+                    <td className="p-4 text-[11px] font-bold text-slate-500 dark:text-slate-500 max-w-[130px] truncate" title={asset.department || ''}>
+                      <div className="flex items-center gap-1.5"><Building2 size={12} className="text-slate-300 shrink-0"/> <span className="truncate">{asset.department || '-'}</span></div>
                     </td>
                   )}
                   {visibleColumns.assignedEmployee && (
-                    <td className="p-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 truncate">
-                      <div className="flex items-center gap-1.5"><User size={12} className="text-slate-300 shrink-0"/> {asset.assignedEmployee || '-'}</div>
+                    <td className="p-4 text-[11px] font-bold text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={asset.assignedEmployee || ''}>
+                      <div className="flex items-center gap-1.5"><User size={12} className="text-slate-300 shrink-0"/> <span className="truncate">{asset.assignedEmployee || '-'}</span></div>
                     </td>
                   )}
                   {visibleColumns.purchaseCost && (
-                    <td className="p-4">
+                    <td className="p-4 whitespace-nowrap">
                       <div className="text-[11px] text-slate-900 dark:text-slate-200">
                         {asset.purchaseCost ? (
-                          <span className="flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1">
                             <span className="text-[9px] text-slate-400 font-bold uppercase">AED</span> 
-                            <span className="font-black">{asset.purchaseCost.toLocaleString(undefined, {minimumFractionDigits: 0})}</span>
+                            <span className="font-black tabular-nums">{asset.purchaseCost.toLocaleString(undefined, {minimumFractionDigits: 0})}</span>
                           </span>
                         ) : '-'}
                       </div>
                     </td>
                   )}
-                  <td className="p-4 pr-6 text-right">
-                    <div className="flex justify-end items-center gap-2">
-                      {isVerifiedThisYear(asset) ? (
+                  <td className="p-4 whitespace-nowrap">
+                    {isVerifiedThisYear(asset) ? (
+                      canEdit ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleVerifyAsset(e, asset)}
+                          disabled={verifyingId === asset.id}
+                          title={`Verified on ${new Date(asset.lastAuditedAt!).toLocaleDateString()} by ${asset.lastAuditedBy || 'IT'} — click to unverify`}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-[#00875A] hover:bg-amber-50 hover:text-amber-700 dark:bg-emerald-900/20 dark:text-[#36B37E] dark:hover:bg-amber-900/20 dark:hover:text-amber-400 border border-emerald-200/70 dark:border-emerald-800/40 transition-colors"
+                        >
+                          {verifyingId === asset.id ? <Loader2 size={11} className="animate-spin"/> : <CheckCircle2 size={12} />}
+                          Verified
+                        </button>
+                      ) : (
                         <span
                           title={`Verified on ${new Date(asset.lastAuditedAt!).toLocaleDateString()} by ${asset.lastAuditedBy || 'IT'}`}
                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-[#00875A] dark:bg-emerald-900/20 dark:text-[#36B37E]"
                         >
                           <CheckCircle2 size={12} /> Verified
                         </span>
-                      ) : canEdit ? (
+                      )
+                    ) : canEdit ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleVerifyAsset(e, asset)}
+                        disabled={verifyingId === asset.id}
+                        title="Mark physically verified for year-end inventory"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border border-[#C1C7D0] dark:border-[#2E3A4D] text-[#42526E] dark:text-[#CBD5E1] hover:border-[#00875A] hover:text-[#00875A] transition-colors"
+                      >
+                        {verifyingId === asset.id ? <Loader2 size={11} className="animate-spin"/> : <CheckCircle2 size={11} />}
+                        Verify
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="p-4 pr-6 text-right whitespace-nowrap">
+                    {canEdit && (
+                      <div className="inline-flex items-center gap-1">
                         <button
-                          onClick={() => handleVerifyAsset(asset)}
-                          disabled={verifyingId === asset.id}
-                          title="Mark physically verified for year-end inventory"
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border border-[#C1C7D0] dark:border-[#2E3A4D] text-[#42526E] dark:text-[#CBD5E1] hover:border-[#00875A] hover:text-[#00875A] transition-colors"
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onEdit(asset); }}
+                          title="Edit Asset"
+                          className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"
                         >
-                          {verifyingId === asset.id ? <Loader2 size={11} className="animate-spin"/> : <CheckCircle2 size={11} />}
-                          Verify
+                          <Edit2 size={14}/>
                         </button>
-                      ) : null}
-                      {canEdit && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => onEdit(asset)} className="p-1.5 text-slate-400 hover:text-blue-500 transition-colors"><Edit2 size={14}/></button>
-                          <button onClick={() => onDuplicate(asset)} className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"><Copy size={14}/></button>
-                          <button onClick={() => onDelete(asset.id)} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
-                        </div>
-                      )}
-                    </div>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDuplicate(asset); }}
+                          title="Duplicate Asset"
+                          className="p-1.5 text-slate-400 hover:text-indigo-500 transition-colors"
+                        >
+                          <Copy size={14}/>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDelete(asset.id); }}
+                          title="Delete Asset"
+                          className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={14}/>
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
               {filteredAssets.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="p-20 text-center text-slate-400 font-bold text-xs uppercase tracking-[0.2em] opacity-30">No matching records</td>
+                  <td colSpan={11} className="p-20 text-center text-slate-400 font-bold text-xs uppercase tracking-[0.2em] opacity-30">No matching records</td>
                 </tr>
               )}
             </tbody>

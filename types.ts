@@ -64,13 +64,14 @@ export interface PendingHandover {
   targetName?: string;
 }
 
-export type WorkItemType = 'Ticket' | 'Task';
+export type WorkItemType = 'Ticket' | 'Task' | 'POS_Supy';
 export type WorkItemStatus = 'New' | 'Open' | 'In Progress' | 'Waiting on Vendor' | 'Waiting for Parts' | 'Resolved' | 'Rejected';
 
 export interface IncidentReport {
   id: string;
   ticketNumber: string;
-  itemType?: WorkItemType; // 'Ticket' (staff-reported) or 'Task' (internal IT work)
+  itemType?: WorkItemType; // 'Ticket' (staff-reported), 'Task' (internal IT), or 'POS_Supy'
+  posSystem?: 'Linga' | 'Supy'; // Used when itemType === 'POS_Supy'
   title?: string; // Concise title; falls back to assetName for legacy tickets
   assetId?: string;
   assetName: string; // Fallback if asset is generic or not in system
@@ -80,7 +81,8 @@ export interface IncidentReport {
   location: string;
   reportedBy: string; // Staff name or creator
   reporterEmail?: string; // Email for updates
-  assignedTo?: string; // Owner: Ryan / Diego
+  acceptedBy?: string; // Tech who originally accepted the ticket
+  assignedTo?: string; // Current task owner: Ryan / Diego (editable)
   vendor?: string; // Assigned vendor name
   dueDate?: string; // ISO date YYYY-MM-DD
   externalTicketRef?: string; // Bayzat / ISP / Vendor ticket reference
@@ -88,9 +90,33 @@ export interface IncidentReport {
   description: string;
   priority: 'Low' | 'Medium' | 'High' | 'Critical';
   status: WorkItemStatus;
+  rejectionReason?: string;
   createdAt: string;
   resolvedAt?: string;
   resolutionNotes?: string;
+}
+
+export type ProcurementStage =
+  | 'New'
+  | 'Documents Prepared'
+  | 'Documents Submitted'
+  | 'Documents Signed'
+  | 'Ordered'
+  | 'Delivered'
+  | 'Installation'
+  | 'Closed'
+  | 'Rejected'
+  // Legacy statuses kept for backward compatibility
+  | 'Acknowledged'
+  | 'Pending Finance'
+  | 'Approved'
+  | 'Deployed';
+
+export interface ProcurementStageLog {
+  stage: ProcurementStage;
+  remarks: string;
+  updatedBy: string;
+  updatedAt: string;
 }
 
 export interface AssetRequest {
@@ -98,11 +124,17 @@ export interface AssetRequest {
   requestNumber: string;
   requesterName: string;
   requesterEmail?: string; // Email for updates
+  scope?: 'Head Office' | 'Venue';
+  venue?: string;
   department: string;
-  category: string; // What they want (e.g. Laptop)
+  category: string; // Requested equipment item (1 item per request)
   urgency: 'Low' | 'Medium' | 'High';
   reason: string;
-  status: 'New' | 'Acknowledged' | 'Pending Finance' | 'Approved' | 'Deployed' | 'Rejected';
+  status: ProcurementStage;
+  stageRemarks?: Record<string, string>;
+  stageHistory?: ProcurementStageLog[];
+  handoverRequired?: boolean;
+  rejectionReason?: string;
   createdAt: string;
   resolvedAt?: string;
   resolutionNotes?: string;
@@ -142,6 +174,8 @@ export interface Asset {
   purchaseCost?: number;
   disposalDate?: string; // ISO date YYYY-MM-DD
   disposalReason?: string;
+  printerIp?: string; // Required for Printer categories
+  printerPassword?: string; // Required for Printer categories
   lastAuditedAt?: string; // ISO timestamp for year-end physical inventory verification
   lastAuditedBy?: string;
   lastUpdated: string;

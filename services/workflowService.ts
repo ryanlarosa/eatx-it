@@ -84,15 +84,16 @@ export const listenToIncidents = (cb: (tickets: IncidentReport[]) => void) => {
 
 export const createIncidentReport = async (report: Partial<IncidentReport>) => {
   const isTask = report.itemType === "Task";
-  const prefix = isTask ? "TSK" : "TKT";
+  const isPosSupy = report.itemType === "POS_Supy";
+  const prefix = isTask ? "TSK" : isPosSupy ? (report.posSystem === "Supy" ? "SUPY" : "POS") : "TKT";
   const ticketNumber =
     report.ticketNumber ||
     `${prefix}-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
   const newReport = {
     ...report,
     itemType: report.itemType || "Ticket",
-    title: report.title || report.assetName || "Untitled IT Item",
-    assetName: report.assetName || report.title || "General IT",
+    title: report.title || report.assetName || (isPosSupy ? `${report.posSystem || "POS"} Issue` : "Untitled IT Item"),
+    assetName: report.assetName || report.title || (isPosSupy ? `${report.posSystem || "POS"} System` : "General IT"),
     ticketNumber,
     status: report.status || (isTask ? "Open" : "New"),
     createdAt: new Date().toISOString(),
@@ -104,16 +105,33 @@ export const createIncidentReport = async (report: Partial<IncidentReport>) => {
     handleFirestoreError(error, OperationType.CREATE, path);
   }
 
-  // Only fire staff portal alerts for incoming Support Tickets (not internal IT tasks)
+  // Only fire staff portal alerts for incoming Support Tickets & POS/Supy issues
   if (!isTask) {
+    const dest = isPosSupy ? "/pos-supy" : "/tickets";
     try {
-      await createNotification("warning", "New Support Ticket", `${report.reportedBy} reported an issue at ${report.location}.`, "/tickets");
-      await sendSystemEmail("EATX IT: New Support Ticket", `${report.reportedBy} reported: ${report.description}. Ref: ${ticketNumber}`, window.location.origin + "/#/tickets");
+      await createNotification(
+        "warning",
+        isPosSupy ? `New ${report.posSystem || "POS"} Issue` : "New Support Ticket",
+        `${report.reportedBy} reported an issue at ${report.location}.`,
+        dest
+      );
+      await sendSystemEmail(
+        isPosSupy ? `EATX IT: New ${report.posSystem || "POS"} Issue` : "EATX IT: New Support Ticket",
+        `${report.reportedBy} reported: ${report.description}. Ref: ${ticketNumber}`,
+        window.location.origin + `/#${dest}`
+      );
       if (report.reporterEmail) {
-        await sendSystemEmail("Ticket Received: EATX IT", `Hi ${report.reportedBy}, your issue at ${report.location} is logged. Ref: ${ticketNumber}`, window.location.origin + "/#/track", report.reporterEmail, true);
+        await sendSystemEmail(
+          "Ticket Received: EATX IT",
+          `Hi ${report.reportedBy}, your issue at ${report.location} is logged. Ref: ${ticketNumber}`,
+          window.location.origin + "/#/track",
+          report.reporterEmail,
+          true
+        );
       }
     } catch (e) {}
   }
+  return ticketNumber;
 };
 
 export const updateIncidentReport = async (id: string, updates: Partial<IncidentReport>, updateAssetStatus: boolean = false) => {
