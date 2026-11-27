@@ -166,6 +166,7 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
         { header: 'Serial Number', key: 'serialNumber', width: 20 }, { header: 'Supplier', key: 'supplier', width: 25 },
         { header: 'Cost', key: 'cost', width: 15 }, { header: 'Purchase Date', key: 'purchaseDate', width: 25 },
         { header: 'Assigned To', key: 'assignedEmployee', width: 25 }, { header: 'Description', key: 'description', width: 40 },
+        { header: 'Printer IP', key: 'printerIp', width: 18 }, { header: 'Printer Password', key: 'printerPassword', width: 20 },
     ];
     
     for (let i = 2; i <= 1000; i++) {
@@ -190,13 +191,15 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
         { header: 'System ID', key: 'id' }, { header: 'Asset Name', key: 'name' }, { header: 'Category', key: 'category' },
         { header: 'Status', key: 'status' }, { header: 'Location', key: 'location' }, { header: 'Department', key: 'department' },
         { header: 'Serial Number', key: 'serialNumber' }, { header: 'Supplier', key: 'supplier' }, { header: 'Cost', key: 'cost' },
-        { header: 'Purchase Date', key: 'purchaseDate' }, { header: 'Assigned Employee', key: 'assignedEmployee' }, { header: 'Description', key: 'description' }
+        { header: 'Purchase Date', key: 'purchaseDate' }, { header: 'Assigned Employee', key: 'assignedEmployee' }, { header: 'Description', key: 'description' },
+        { header: 'Printer IP', key: 'printerIp' }, { header: 'Printer Password', key: 'printerPassword' }
       ];
       assets.forEach(asset => {
           sheet.addRow({
               id: asset.id, name: asset.name, category: asset.category, status: asset.status, location: asset.location,
               department: asset.department, serialNumber: asset.serialNumber, supplier: asset.supplier,
-              cost: asset.purchaseCost, purchaseDate: asset.purchaseDate, assignedEmployee: asset.assignedEmployee, description: asset.description
+              cost: asset.purchaseCost, purchaseDate: asset.purchaseDate, assignedEmployee: asset.assignedEmployee, description: asset.description,
+              printerIp: asset.printerIp || '', printerPassword: asset.printerPassword || ''
           });
       });
       const buffer = await workbook.xlsx.writeBuffer();
@@ -240,7 +243,10 @@ const AssetList: React.FC<AssetListProps> = ({ assets, onEdit, onDuplicate, onDe
                 name: name, category: getVal(3) || 'Other', status: (ASSET_STATUSES.includes(getVal(4) as AssetStatus) ? getVal(4) : 'Active') as AssetStatus,
                 location: getVal(5) || 'Head Office', department: getVal(6) || '', serialNumber: getVal(7) || '', supplier: getVal(8) || '',
                 purchaseCost: getVal(9) ? parseFloat(getVal(9)) : undefined, purchaseDate: getVal(10) || undefined, assignedEmployee: getVal(11) || '',
-                description: getVal(12) || 'Imported via Excel', lastUpdated: new Date().toISOString()
+                description: getVal(12) || 'Imported via Excel',
+                printerIp: getVal(13) || '',
+                printerPassword: getVal(14) || '',
+                lastUpdated: new Date().toISOString()
             });
         });
 

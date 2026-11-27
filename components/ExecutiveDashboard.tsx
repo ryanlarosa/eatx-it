@@ -51,6 +51,21 @@ const ExecutiveDashboard: React.FC = () => {
     [openTickets]
   );
 
+  const openPosSupy = useMemo(
+    () => openTickets.filter((t) => t.itemType === "POS_Supy"),
+    [openTickets]
+  );
+
+  const openLingaCount = useMemo(
+    () => openPosSupy.filter((t) => t.posSystem === "Linga").length,
+    [openPosSupy]
+  );
+
+  const openSupyCount = useMemo(
+    () => openPosSupy.filter((t) => t.posSystem === "Supy").length,
+    [openPosSupy]
+  );
+
   const overdueTasks = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -181,7 +196,7 @@ const ExecutiveDashboard: React.FC = () => {
       </div>
 
       {/* Unified Executive Summary Strip */}
-      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
         <div className="p-4">
           <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
             Active projects
@@ -228,6 +243,17 @@ const ExecutiveDashboard: React.FC = () => {
           </div>
         </div>
         <div className="p-4">
+          <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
+            POS / Supy issues
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {openPosSupy.length}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5 tabular-nums">
+            {openLingaCount} Linga · {openSupyCount} Supy
+          </div>
+        </div>
+        <div className="p-4 col-span-2 md:col-span-1">
           <div className="text-[12px] text-[#5E6C84] dark:text-[#94A3B8]">
             IT asset portfolio
           </div>

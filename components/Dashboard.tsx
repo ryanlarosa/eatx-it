@@ -25,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
   const [tickets, setTickets] = useState<IncidentReport[]>([]);
   const [requests, setRequests] = useState<AssetRequest[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [queueTab, setQueueTab] = useState<"tasks" | "tickets" | "projects">(
+  const [queueTab, setQueueTab] = useState<"tasks" | "tickets" | "pos" | "projects">(
     "tasks"
   );
 
@@ -61,6 +61,21 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
   const openTasks = useMemo(
     () => openWorkItems.filter((t) => t.itemType === "Task"),
     [openWorkItems]
+  );
+
+  const openPosSupy = useMemo(
+    () => openWorkItems.filter((t) => t.itemType === "POS_Supy"),
+    [openWorkItems]
+  );
+
+  const openLingaCount = useMemo(
+    () => openPosSupy.filter((t) => t.posSystem === "Linga").length,
+    [openPosSupy]
+  );
+
+  const openSupyCount = useMemo(
+    () => openPosSupy.filter((t) => t.posSystem === "Supy").length,
+    [openPosSupy]
   );
 
   const overdueTaskCount = useMemo(() => {
@@ -170,9 +185,9 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
       </div>
 
       {/* Unified Enterprise Summary Bar (Meraki / Intune style) */}
-      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
+      <div className="bg-white dark:bg-[#161C26] border border-[#DFE3E8] dark:border-[#242E40] rounded grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-y lg:divide-y-0 md:divide-x divide-[#EBECF0] dark:divide-[#242E40]">
         <Link
-          to="/repairs"
+          to="/tickets"
           className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
         >
           <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
@@ -195,7 +210,22 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
         </Link>
 
         <Link
-          to="/tasks"
+          to="/pos-supy"
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
+        >
+          <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
+            POS / Supy
+          </div>
+          <div className="text-[22px] font-semibold text-[#172B4D] dark:text-[#E6EDF5] tabular-nums mt-1">
+            {openPosSupy.length}
+          </div>
+          <div className="text-[12px] text-[#6B778C] mt-0.5 tabular-nums">
+            {openLingaCount} Linga · {openSupyCount} Supy
+          </div>
+        </Link>
+
+        <Link
+          to="/tickets"
           className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
         >
           <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
@@ -249,7 +279,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
 
         <Link
           to="/reports"
-          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors col-span-2 md:col-span-1"
+          className="p-4 hover:bg-[#F9FAFB] dark:hover:bg-[#1B2230] transition-colors"
         >
           <div className="text-[12px] font-medium text-[#5E6C84] dark:text-[#94A3B8]">
             Fleet valuation
@@ -272,6 +302,7 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
               {[
                 { id: "tasks", label: `Active tasks (${openTasks.length})` },
                 { id: "tickets", label: `Open tickets (${openTickets.length})` },
+                { id: "pos", label: `POS / Supy (${openPosSupy.length})` },
                 {
                   id: "projects",
                   label: `Active projects (${activeProjects.length})`,
@@ -293,10 +324,10 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
 
             <Link
               to={
-                queueTab === "tasks"
-                  ? "/tasks"
-                  : queueTab === "tickets"
-                  ? "/repairs"
+                queueTab === "tasks" || queueTab === "tickets"
+                  ? "/tickets"
+                  : queueTab === "pos"
+                  ? "/pos-supy"
                   : "/planner"
               }
               className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline shrink-0"
@@ -402,6 +433,67 @@ const Dashboard: React.FC<DashboardProps> = ({ stats, allAssets }) => {
                           {t.priority}
                         </td>
                         <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8]">
+                          {t.status}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {queueTab === "pos" && (
+              <table className="w-full text-left border-collapse text-[13px]">
+                <thead>
+                  <tr className="border-b border-[#EBECF0] dark:border-[#242E40] text-[11px] font-semibold uppercase tracking-wide text-[#6B778C] bg-[#FAFBFC] dark:bg-[#181F2B]">
+                    <th className="px-4 py-2.5">Ticket</th>
+                    <th className="px-4 py-2.5">System</th>
+                    <th className="px-4 py-2.5">Description</th>
+                    <th className="px-4 py-2.5">Venue</th>
+                    <th className="px-4 py-2.5">Owner</th>
+                    <th className="px-4 py-2.5">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EBECF0] dark:divide-[#242E40]">
+                  {openPosSupy.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-4 py-10 text-center text-[#6B778C]"
+                      >
+                        No open POS / Supy issues.
+                      </td>
+                    </tr>
+                  ) : (
+                    openPosSupy.slice(0, 10).map((t) => (
+                      <tr
+                        key={t.id}
+                        className="hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] transition-colors"
+                      >
+                        <td className="px-4 py-2.5 font-mono text-xs text-[#0052CC] dark:text-[#4C9AFF] whitespace-nowrap">
+                          {t.ticketNumber}
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              t.posSystem === "Linga"
+                                ? "bg-[#DEEBFF] text-[#0052CC] dark:bg-[#0052CC]/20 dark:text-[#4C9AFF]"
+                                : "bg-emerald-50 text-[#00875A] dark:bg-emerald-900/20 dark:text-[#36B37E]"
+                            }`}
+                          >
+                            {t.posSystem || "POS"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-[#172B4D] dark:text-[#E6EDF5]">
+                          <div className="truncate max-w-xs">{t.description}</div>
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8] whitespace-nowrap">
+                          {t.location}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#172B4D] dark:text-[#CBD5E1] whitespace-nowrap">
+                          {t.assignedTo || "Unassigned"}
+                        </td>
+                        <td className="px-4 py-2.5 text-[#5E6C84] dark:text-[#94A3B8] whitespace-nowrap">
                           {t.status}
                         </td>
                       </tr>

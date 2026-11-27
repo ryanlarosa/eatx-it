@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Loader2, LogOut, ShieldCheck, AlertCircle, ArrowLeft } from "lucide-react";
+import { Loader2, LogOut, ShieldCheck, AlertCircle, ArrowLeft, Mail, Lock } from "lucide-react";
 import { UserProfile } from "../types";
 import {
   subscribeToAuth,
   getCurrentUserProfile,
   signInWithCompanyGoogle,
+  loginUser,
   logoutUser,
   isAllowedCompanyEmail,
   hasInternalConsoleAccess,
@@ -25,6 +26,10 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
   const [user, setUser] = useState<UserProfile | null>(getCurrentUserProfile());
   const [initializing, setInitializing] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
+  const [signingInEmail, setSigningInEmail] = useState(false);
+  const [showSupervisorForm, setShowSupervisorForm] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const location = useLocation();
 
@@ -55,6 +60,30 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
       }
     } finally {
       setSigningIn(false);
+    }
+  };
+
+  const handleSupervisorSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+    setSigningInEmail(true);
+    setError("");
+    try {
+      await loginUser(email.trim(), password);
+    } catch (err: any) {
+      if (
+        err?.code === "auth/invalid-credential" ||
+        err?.code === "auth/wrong-password" ||
+        err?.code === "auth/user-not-found"
+      ) {
+        setError("Invalid email or password. Contact IT if you need a Venue Supervisor account.");
+      } else if (err?.code === "auth/too-many-requests") {
+        setError("Too many failed attempts. Please wait a few minutes and try again.");
+      } else {
+        setError(err?.message || "Email sign-in failed. Please try again.");
+      }
+    } finally {
+      setSigningInEmail(false);
     }
   };
 
@@ -91,8 +120,8 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
               />
               <div>
                 <strong>Company authentication required.</strong> Sign in with your
-                official EATX / Bull&amp;Roo Google Workspace email to submit or
-                track IT tickets.
+                official EATX / Bull&amp;Roo Google Workspace email, or use an
+                IT-issued Venue Supervisor email &amp; password.
               </div>
             </div>
 
@@ -105,7 +134,7 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
 
             <button
               onClick={handleGoogleSignIn}
-              disabled={signingIn}
+              disabled={signingIn || signingInEmail}
               className="w-full h-10 bg-white dark:bg-[#0F141C] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] text-[#172B4D] dark:text-[#E6EDF5] border border-[#C1C7D0] dark:border-[#2E3A4D] rounded text-[14px] font-medium flex items-center justify-center gap-2.5 transition-colors disabled:opacity-50"
             >
               {signingIn ? (
@@ -134,6 +163,80 @@ const StaffPortalGate: React.FC<StaffPortalGateProps> = ({
                 </>
               )}
             </button>
+
+            <div className="my-4 flex items-center gap-3">
+              <div className="flex-1 h-px bg-[#EBECF0] dark:bg-[#242E40]" />
+              <span className="text-[11px] font-medium text-[#6B778C]">
+                or Venue Supervisor
+              </span>
+              <div className="flex-1 h-px bg-[#EBECF0] dark:bg-[#242E40]" />
+            </div>
+
+            {!showSupervisorForm ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSupervisorForm(true);
+                  setError("");
+                }}
+                className="w-full h-9 bg-[#F4F5F7] dark:bg-[#1B2230] hover:bg-[#EBECF0] dark:hover:bg-[#242E40] text-[#42526E] dark:text-[#CBD5E1] border border-[#DFE3E8] dark:border-[#2A3444] rounded text-[13px] font-medium flex items-center justify-center gap-2 transition-colors"
+              >
+                <Mail size={14} />
+                Sign in with Supervisor Email &amp; Password
+              </button>
+            ) : (
+              <form onSubmit={handleSupervisorSignIn} className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#5E6C84] dark:text-[#94A3B8] mb-1">
+                    Supervisor Email
+                  </label>
+                  <div className="relative">
+                    <Mail
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B778C]"
+                    />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="supervisor@venue.com"
+                      className="w-full pl-9 pr-3 py-2 text-[13px] rounded border border-[#C1C7D0] dark:border-[#2E3A4D] bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#5E6C84] dark:text-[#94A3B8] mb-1">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B778C]"
+                    />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="w-full pl-9 pr-3 py-2 text-[13px] rounded border border-[#C1C7D0] dark:border-[#2E3A4D] bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={signingInEmail || signingIn}
+                  className="w-full h-9 bg-[#0052CC] hover:bg-[#0043A8] text-white rounded text-[13px] font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                >
+                  {signingInEmail ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    "Sign in"
+                  )}
+                </button>
+              </form>
+            )}
 
             <div className="mt-6 pt-4 border-t border-[#EBECF0] dark:border-[#242E40] text-center">
               <Link
