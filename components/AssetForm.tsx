@@ -8,6 +8,7 @@ import QRCode from 'react-qr-code';
 
 interface AssetFormProps {
   initialData?: Asset | null;
+  defaultLocation?: string;
   onSave: (asset: Asset) => void;
   onCancel: () => void;
 }
@@ -36,7 +37,7 @@ const emptyAsset: Asset = {
   lastUpdated: ''
 };
 
-const AssetForm: React.FC<AssetFormProps> = ({ initialData, onSave, onCancel }) => {
+const AssetForm: React.FC<AssetFormProps> = ({ initialData, defaultLocation, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Asset>(emptyAsset);
   const [aiInput, setAiInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -75,13 +76,13 @@ const AssetForm: React.FC<AssetFormProps> = ({ initialData, onSave, onCancel }) 
                 ...emptyAsset,
                 id: `ast-${Math.random().toString(36).substr(2, 9)}`,
                 category: config.categories[0] || 'Other',
-                location: config.locations[0] || '',
+                location: defaultLocation || config.locations[0] || '',
                 department: config.departments?.[0] || ''
             });
         }
     };
     loadConfig();
-  }, [initialData]);
+  }, [initialData, defaultLocation]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

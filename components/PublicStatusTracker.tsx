@@ -25,7 +25,7 @@ const StatusTrackerContent: React.FC = () => {
       if (data) setResult(data);
       else
         setError(
-          "Reference number not found. Check your Ticket (TKT-...) or Request (REQ-...) ID."
+          "Reference number not found. Check your Ticket (TKT-... / POS-... / SUPY-...) or Request (REQ-...) ID."
         );
     } catch {
       setError("Unable to search right now. Please try again.");
@@ -34,8 +34,25 @@ const StatusTrackerContent: React.FC = () => {
     }
   };
 
-  const getSteps = (type: string, status: string) => {
+  const PROCUREMENT_STAGES = [
+    "Documents Prepared",
+    "Documents Submitted",
+    "Documents Signed",
+    "Ordered",
+    "Delivered",
+    "Installation",
+    "Closed",
+  ];
+
+  const getSteps = (type: string, status: string, procurementStage?: string) => {
     if (type === "Request") {
+      if (procurementStage && PROCUREMENT_STAGES.includes(procurementStage)) {
+        const idx = PROCUREMENT_STAGES.indexOf(procurementStage);
+        return PROCUREMENT_STAGES.map((stage, i) => ({
+          l: stage,
+          done: i <= idx,
+        }));
+      }
       return [
         { l: "Submitted", done: true },
         {
@@ -76,7 +93,7 @@ const StatusTrackerContent: React.FC = () => {
           Track Ticket or Request
         </h1>
         <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">
-          Enter your reference number (e.g. TKT-2026-1234 or REQ-2026-1234) to check live status.
+          Enter your reference number (e.g. TKT-2026-1234, POS-2026-1234, SUPY-2026-1234, or REQ-2026-1234) to check live status.
         </p>
       </div>
 
@@ -86,7 +103,7 @@ const StatusTrackerContent: React.FC = () => {
       >
         <input
           className="flex-1 px-3 py-2 text-[14px] font-mono border border-[#C1C7D0] dark:border-[#2E3A4D] rounded bg-white dark:bg-[#0F141C] text-[#172B4D] dark:text-[#E6EDF5] focus:border-[#0052CC] focus:ring-1 focus:ring-[#0052CC] outline-none"
-          placeholder="TKT-2026-1234 or REQ-2026-1234"
+          placeholder="TKT-2026-1234, POS-2026-1234, or REQ-2026-1234"
           value={refId}
           onChange={(e) => setRefId(e.target.value)}
           autoFocus
@@ -127,8 +144,8 @@ const StatusTrackerContent: React.FC = () => {
           </div>
 
           {result.status !== "Rejected" && result.status !== "Cancelled" && (
-            <div className="px-5 py-4 border-b border-[#EBECF0] dark:border-[#242E40] grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {getSteps(result.type, result.status).map((step) => (
+            <div className="px-5 py-4 border-b border-[#EBECF0] dark:border-[#242E40] grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {getSteps(result.type, result.status, result.procurementStage).map((step) => (
                 <div key={step.l} className="flex items-center gap-2 text-xs">
                   <CheckCircle2
                     size={15}
@@ -149,6 +166,13 @@ const StatusTrackerContent: React.FC = () => {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {result.status === "Rejected" && result.rejectionReason && (
+            <div className="mx-5 mt-4 p-3.5 rounded bg-[#FFEBE6] dark:bg-red-950/30 border border-[#FFBDAD] dark:border-red-900 text-[#BF2600] dark:text-red-400 text-[13px]">
+              <div className="text-xs font-semibold mb-0.5">Rejection Reason</div>
+              <div>{result.rejectionReason}</div>
             </div>
           )}
 

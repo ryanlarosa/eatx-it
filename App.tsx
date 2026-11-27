@@ -47,19 +47,22 @@ const AssetRegistryWrapper = ({ assets, view, setView, editingAsset, setEditingA
     const [searchParams, setSearchParams] = useSearchParams();
     const deepLinkId = searchParams.get('id');
     const isNewParam = searchParams.get('new');
+    const locationParam = searchParams.get('location') || undefined;
+    const [defaultLocation, setDefaultLocation] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         if (isNewParam === '1' && canEdit) {
             setEditingAsset(null);
+            setDefaultLocation(locationParam);
             setView('form');
             setSearchParams({}, { replace: true });
             return;
         }
         if (deepLinkId && assets.length > 0 && !editingAsset) {
             const asset = assets.find((a: Asset) => a.id === deepLinkId);
-            if (asset) { setEditingAsset(asset); setView('form'); }
+            if (asset) { setEditingAsset(asset); setDefaultLocation(undefined); setView('form'); }
         }
-    }, [deepLinkId, isNewParam, assets]);
+    }, [deepLinkId, isNewParam, locationParam, assets]);
 
     return view === 'list' ? (
         <div className="space-y-5">
@@ -69,17 +72,17 @@ const AssetRegistryWrapper = ({ assets, view, setView, editingAsset, setEditingA
                   <p className="text-[13px] text-[#5E6C84] dark:text-[#94A3B8]">Centralized hardware inventory across EATX venues and offices.</p>
                 </div>
                 {canEdit && (
-                    <button onClick={() => { setEditingAsset(null); setView('form'); }} className="bg-[#0052CC] hover:bg-[#0043A8] text-white px-3.5 py-2 rounded flex items-center gap-2 font-medium transition-colors text-[13px]">
+                    <button onClick={() => { setEditingAsset(null); setDefaultLocation(undefined); setView('form'); }} className="bg-[#0052CC] hover:bg-[#0043A8] text-white px-3.5 py-2 rounded flex items-center gap-2 font-medium transition-colors text-[13px]">
                         <PlusCircle size={15} /> <span className="hidden sm:inline">Add Asset</span><span className="sm:hidden">Add</span>
                     </button>
                 )}
             </div>
             {loading ? <RouteLoader /> :
-                <AssetList assets={assets} onEdit={(a) => { setEditingAsset(a); setView('form'); }} onDuplicate={handleDuplicate} onDelete={handleDeleteAsset} />
+                <AssetList assets={assets} onEdit={(a) => { setEditingAsset(a); setDefaultLocation(undefined); setView('form'); }} onDuplicate={handleDuplicate} onDelete={handleDeleteAsset} />
             }
         </div>
     ) : (
-        <AssetForm initialData={editingAsset} onSave={handleSaveAsset} onCancel={() => { setView('list'); setEditingAsset(null); setSearchParams({}); }} />
+        <AssetForm initialData={editingAsset} defaultLocation={defaultLocation} onSave={handleSaveAsset} onCancel={() => { setView('list'); setEditingAsset(null); setDefaultLocation(undefined); setSearchParams({}); }} />
     );
 };
 

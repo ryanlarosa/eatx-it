@@ -191,12 +191,34 @@ export const getPublicItemStatus = async (refId: string): Promise<PublicStatusRe
     const tSnap = await getDocs(query(collection(db, getColName("incidents")), where("ticketNumber", "==", refId)));
     if (!tSnap.empty) {
       const d = tSnap.docs[0].data() as IncidentReport;
-      return { id: d.ticketNumber, type: "Ticket", status: d.status, subject: d.assetName, details: d.description, created: d.createdAt, updated: d.resolvedAt, notes: d.resolutionNotes };
+      return {
+        id: d.ticketNumber,
+        type: "Ticket",
+        status: d.status,
+        subject: d.itemType === "POS_Supy" ? `${d.posSystem || "POS"} Issue (${d.location})` : d.assetName,
+        details: d.description,
+        created: d.createdAt,
+        updated: d.resolvedAt,
+        notes: d.resolutionNotes,
+        rejectionReason: d.rejectionReason,
+        assignedTo: d.assignedTo,
+      };
     }
     const rSnap = await getDocs(query(collection(db, getColName("requests")), where("requestNumber", "==", refId)));
     if (!rSnap.empty) {
       const d = rSnap.docs[0].data() as AssetRequest;
-      return { id: d.requestNumber, type: "Request", status: d.status, subject: d.category, details: d.reason, created: d.createdAt, updated: d.resolvedAt, notes: d.resolutionNotes };
+      return {
+        id: d.requestNumber,
+        type: "Request",
+        status: d.status,
+        subject: d.category,
+        details: d.reason,
+        created: d.createdAt,
+        updated: d.resolvedAt,
+        notes: d.resolutionNotes,
+        procurementStage: d.status,
+        rejectionReason: d.rejectionReason,
+      };
     }
     return null;
   } catch (error) {

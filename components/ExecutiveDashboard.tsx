@@ -391,10 +391,10 @@ const ExecutiveDashboard: React.FC = () => {
               Overdue tasks & critical issues
             </h2>
             <Link
-              to="/tasks"
+              to="/tickets"
               className="text-xs font-medium text-[#0052CC] dark:text-[#4C9AFF] hover:underline"
             >
-              Tasks
+              Tickets &amp; Tasks
             </Link>
           </div>
           {criticalTickets.length === 0 && overdueTasks.length === 0 ? (

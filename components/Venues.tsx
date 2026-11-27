@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   Asset,
   IncidentReport,
@@ -24,6 +24,8 @@ import {
   getCurrentUserProfile,
   canManageOperations,
   isAdminRole,
+  markAssetVerified,
+  unverifyAsset,
 } from "../services/storageService";
 import { useAppData } from "../context/AppDataContext";
 import {
@@ -47,6 +49,9 @@ import {
   Globe,
   ClipboardCheck,
   AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 
 const VENUE_STATUSES: VenueStatus[] = [
@@ -120,6 +125,24 @@ const Venues: React.FC = () => {
   const [detailTab, setDetailTab] = useState<
     "infra" | "isp" | "maintenance" | "visits"
   >("infra");
+  const [infraAuditFilter, setInfraAuditFilter] = useState<"All" | "Unverified" | "Verified">("All");
+  const [verifyingAssetId, setVerifyingAssetId] = useState<string | null>(null);
+  const currentYear = new Date().getFullYear().toString();
+  const isAssetVerifiedThisYear = (a: Asset) => Boolean(a.lastAuditedAt?.startsWith(currentYear));
+
+  const handleToggleVenueAssetVerify = async (asset: Asset) => {
+    if (!canEdit) return;
+    setVerifyingAssetId(asset.id);
+    try {
+      if (isAssetVerifiedThisYear(asset)) {
+        await unverifyAsset(asset.id);
+      } else {
+        await markAssetVerified(asset.id, asset.name);
+      }
+    } finally {
+      setVerifyingAssetId(null);
+    }
+  };
 
   // Create / Edit Venue Modal
   const [showVenueModal, setShowVenueModal] = useState(false);
@@ -1204,45 +1227,172 @@ const Venues: React.FC = () => {
 
             {/* Body */}
             <div className="p-5 overflow-y-auto flex-1 space-y-5">
-              {detailTab === "infra" && (
-                <div className="space-y-4">
-                  {getVenueAssets(selectedVenue.name).length === 0 ? (
-                    <div className="p-8 text-center text-sm text-slate-400 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
-                      No assets assigned to <strong>{selectedVenue.name}</strong> yet. Assign assets to this location in Inventory Registry to see them here automatically.
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
-                      {getVenueAssets(selectedVenue.name).map((a) => (
-                        <div
-                          key={a.id}
-                          className="p-3.5 flex items-center justify-between gap-3"
-                        >
-                          <div>
-                            <div className="font-semibold text-sm text-slate-900 dark:text-white">
-                              {a.name}{" "}
-                              {a.assetTag && (
-                                <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
-                                  [{a.assetTag}]
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-500">
-                              {a.category} •{" "}
-                              {[a.manufacturer, a.model]
-                                .filter(Boolean)
-                                .join(" ") || "Generic"}{" "}
-                              • SN: {a.serialNumber || "N/A"}
-                            </div>
+              {detailTab === "infra" && (() => {
+                const venueAssets = getVenueAssets(selectedVenue.name);
+                const activeVenueAssets = venueAssets.filter((a) => a.status !== "Retired");
+                const verifiedCount = activeVenueAssets.filter(isAssetVerifiedThisYear).length;
+                const auditPct = activeVenueAssets.length
+                  ? Math.round((verifiedCount / activeVenueAssets.length) * 100)
+                  : 0;
+                const displayedVenueAssets = venueAssets.filter((a) => {
+                  if (infraAuditFilter === "Verified") return isAssetVerifiedThisYear(a);
+                  if (infraAuditFilter === "Unverified") return !isAssetVerifiedThisYear(a);
+                  return true;
+                });
+
+                return (
+                  <div className="space-y-4">
+                    {/* Venue Physical Inventory Audit Bar */}
+                    <div className="p-3.5 rounded-xl bg-[#F9FAFB] dark:bg-[#0F141C] border border-[#DFE3E8] dark:border-[#242E40] space-y-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div className="text-xs font-semibold text-[#172B4D] dark:text-[#E6EDF5]">
+                            {currentYear} Physical Inventory Audit — {selectedVenue.name}
                           </div>
-                          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
-                            {a.status}
-                          </span>
+                          <div className="text-[11px] font-mono text-[#5E6C84] dark:text-[#94A3B8] mt-0.5">
+                            {verifiedCount} / {activeVenueAssets.length} active assets verified ({auditPct}%)
+                          </div>
                         </div>
-                      ))}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {canEdit && (
+                            <>
+                              <Link
+                                to={`/assets?new=1&location=${encodeURIComponent(selectedVenue.name)}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded bg-[#0052CC] hover:bg-[#0043A8] text-white text-xs font-medium transition-colors"
+                              >
+                                <Plus size={13} /> Add Asset Here
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setVisitDraft((prev) => ({
+                                    ...prev,
+                                    visitDate: new Date().toISOString().split("T")[0],
+                                    purpose: "Audit",
+                                    findings: `Physical inventory audit at ${selectedVenue.name}: ${verifiedCount}/${activeVenueAssets.length} active assets verified (${auditPct}%).`,
+                                  }));
+                                  setDetailTab("visits");
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded border border-[#C1C7D0] dark:border-[#2E3A4D] bg-white dark:bg-[#161C26] text-[#172B4D] dark:text-[#E6EDF5] hover:bg-[#F4F5F7] dark:hover:bg-[#1D2534] text-xs font-medium transition-colors"
+                              >
+                                <ClipboardCheck size={13} /> Log Audit Visit
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-full h-1.5 bg-[#EBECF0] dark:bg-[#242E40] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#00875A] rounded-full transition-all"
+                          style={{ width: `${auditPct}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 pt-0.5">
+                        {(["All", "Unverified", "Verified"] as const).map((opt) => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setInfraAuditFilter(opt)}
+                            className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors ${
+                              infraAuditFilter === opt
+                                ? "bg-[#0052CC] text-white border-[#0052CC]"
+                                : "bg-white dark:bg-[#161C26] text-[#5E6C84] dark:text-[#94A3B8] border-[#DFE3E8] dark:border-[#2A3444]"
+                            }`}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {displayedVenueAssets.length === 0 ? (
+                      <div className="p-8 text-center text-sm text-slate-400 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+                        {venueAssets.length === 0 ? (
+                          <>
+                            No assets assigned to <strong>{selectedVenue.name}</strong> yet. Use <strong>Add Asset Here</strong> above to onboard hardware discovered during your site visit.
+                          </>
+                        ) : (
+                          <>No {infraAuditFilter.toLowerCase()} assets at this venue.</>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
+                        {displayedVenueAssets.map((a) => {
+                          const verified = isAssetVerifiedThisYear(a);
+                          return (
+                            <div
+                              key={a.id}
+                              className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Link
+                                    to={`/assets?id=${a.id}`}
+                                    className="font-semibold text-sm text-slate-900 dark:text-white hover:text-[#0052CC] dark:hover:text-[#4C9AFF] inline-flex items-center gap-1"
+                                  >
+                                    {a.name}
+                                    <ExternalLink size={12} className="text-slate-400" />
+                                  </Link>
+                                  {a.assetTag && (
+                                    <span className="text-xs font-mono text-blue-600 dark:text-blue-400">
+                                      [{a.assetTag}]
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-slate-500 mt-0.5">
+                                  {a.category} •{" "}
+                                  {[a.manufacturer, a.model]
+                                    .filter(Boolean)
+                                    .join(" ") || "Generic"}{" "}
+                                  • SN: {a.serialNumber || "N/A"}
+                                  {a.printerIp && (
+                                    <span className="ml-1.5 font-mono text-[#0052CC] dark:text-[#4C9AFF]">
+                                      • IP: {a.printerIp}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                  {a.status}
+                                </span>
+                                {canEdit ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleVenueAssetVerify(a)}
+                                    disabled={verifyingAssetId === a.id}
+                                    title={
+                                      verified
+                                        ? `Verified on ${new Date(a.lastAuditedAt!).toLocaleDateString()} — click to unverify`
+                                        : "Mark physically verified at this venue"
+                                    }
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border transition-colors ${
+                                      verified
+                                        ? "bg-emerald-50 text-[#00875A] border-emerald-200 hover:bg-amber-50 hover:text-amber-700 dark:bg-emerald-900/20 dark:text-[#36B37E] dark:border-emerald-800/50"
+                                        : "bg-white dark:bg-[#0F141C] text-[#42526E] dark:text-[#CBD5E1] border-[#C1C7D0] dark:border-[#2E3A4D] hover:border-[#00875A] hover:text-[#00875A]"
+                                    }`}
+                                  >
+                                    {verifyingAssetId === a.id ? (
+                                      <Loader2 size={12} className="animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 size={12} />
+                                    )}
+                                    {verified ? "Verified" : "Verify"}
+                                  </button>
+                                ) : verified ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-[#00875A] dark:bg-emerald-900/20 dark:text-[#36B37E]">
+                                    <CheckCircle2 size={12} /> Verified
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {detailTab === "isp" && (
                 <div className="space-y-5">

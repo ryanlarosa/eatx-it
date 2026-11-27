@@ -300,6 +300,9 @@ export interface PublicStatusResult {
   created: string;
   updated?: string;
   notes?: string;
+  procurementStage?: string;
+  rejectionReason?: string;
+  assignedTo?: string;
 }
 
 // --- PHASE 2: EMPLOYEE IT PROFILES (Lightweight IT-only, non-Bayzat) ---
